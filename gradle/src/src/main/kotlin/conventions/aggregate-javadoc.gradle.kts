@@ -12,7 +12,7 @@ val aggregateJavadoc by tasks.registering(Javadoc::class) {
 
   title = "Methanol $version API"
 
-  setDestinationDir(layout.buildDirectory.get().file("docs/aggregateJavadoc").asFile)
+  destinationDir = layout.buildDirectory.get().file("docs/aggregateJavadoc").asFile
 
   standardOptions {
     links("https://docs.oracle.com/en/java/javase/$JAVADOC_JDK_VERSION/docs/api/")
@@ -55,7 +55,7 @@ val aggregateJavadoc by tasks.registering(Javadoc::class) {
   }
 }
 
-subprojects.filter { it.isIncludedInAggregateJavadoc }
+javadocDocumentedProjects
   .forEach { documentedProject ->
     val sourceSets: SourceSetContainer by documentedProject.extensions
     aggregateJavadoc {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,7 @@ import com.github.mizosoft.methanol.TypeRef;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
+import com.google.gson.Strictness;
 import java.io.IOException;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -82,7 +83,7 @@ class GsonDeferredDecoderTest {
 
   @Test
   void deserializeWithLenientGson() {
-    var gson = new GsonBuilder().setLenient().create();
+    var gson = new GsonBuilder().setStrictness(Strictness.LENIENT).create();
     verifyThat(createDecoder(gson))
         .converting(Point.class)
         .withDeferredBody("{\n" + "  x: '1',\n" + "  y: '2' // This is a comment \n" + "}")

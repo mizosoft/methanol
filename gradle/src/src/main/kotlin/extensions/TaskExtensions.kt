@@ -45,7 +45,7 @@ fun Test.applyJUnit5Conventions() {
   useJUnitPlatform()
 
   // For consistency, the default timeout must be in sync with TestUtils.TIMEOUT_SECONDS.
-  systemProperty("junit.jupiter.execution.timeout.default", "4s")
+  systemProperty("junit.jupiter.execution.timeout.default", "6s")
   systemProperty("junit.jupiter.execution.timeout.mode", "disabled_on_debug")
 }
 

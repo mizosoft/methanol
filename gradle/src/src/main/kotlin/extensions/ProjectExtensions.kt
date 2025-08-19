@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -55,12 +55,10 @@ val Project.javaModuleName: String
       extensions.add(String::class, MODULE_NAME_EXTENSIONS_NAME, it)
     }
 
-fun Project.projectOrNull(name: String) = findProject(name)
-
-val Project.isIncludedInCoverageReport
-  get() = project in setOf(
+// These projects are included in coverage numbers.
+val Project.coveredProjects
+  get() = setOf(
     project(":methanol"),
-    project(":methanol-blackbox"),
     project(":methanol-brotli"),
     project(":methanol-gson"),
     project(":methanol-jackson"),
@@ -71,13 +69,22 @@ val Project.isIncludedInCoverageReport
     project(":methanol-moshi"),
     project(":methanol-protobuf"),
     project(":methanol-redis"),
-    projectOrNull(":quarkus-native-test"), // Optionally included in build.
-    projectOrNull(":native-image-test"), // Optionally included in build.
-    project(":spring-boot-test"),
   )
 
-val Project.isIncludedInAggregateJavadoc
-  get() = project in setOf(
+// These projects have tests that contribute to counting coverage.
+val Project.testProjects
+  get() = coveredProjects + setOf(
+    project(":methanol-blackbox"),
+    project(":spring-boot-test"),
+    project("methanol-kotlin"),
+    projectOrNull(":native-test"),
+    projectOrNull(":quarkus-native-test"),
+  ).filter { it != null }.map { it!! }
+
+fun Project.projectOrNull(name: String): Project? = findProject(name)
+
+val Project.javadocDocumentedProjects
+  get() = setOf(
     project(":methanol"),
     project(":methanol-brotli"),
     project(":methanol-gson"),
@@ -92,8 +99,8 @@ val Project.isIncludedInAggregateJavadoc
     project(":methanol-testing"),
   )
 
-val Project.isIncludedInAggregateDokka
-  get() = project in setOf(
+val Project.dokkaDocumentedProjects
+  get() = setOf(
     project(":methanol-kotlin"),
     project(":methanol-moshi"),
   )

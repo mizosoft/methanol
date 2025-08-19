@@ -1,6 +1,7 @@
 package conventions
 
-import extensions.isIncludedInCoverageReport
+import extensions.coveredProjects
+import extensions.testProjects
 
 plugins {
   id("conventions.coverage")
@@ -28,27 +29,31 @@ coverallsJacoco {
   ).get().asFile.path
 }
 
-subprojects.filter { it.isIncludedInCoverageReport }
-  .forEach { coveredProject ->
-    coveredProject.plugins.withType<JavaLibraryPlugin> {
-      val sourceSets: SourceSetContainer by coveredProject.extensions
+coveredProjects
+  .forEach { project ->
+    project.plugins.withType<JavaLibraryPlugin> {
+      val sourceSets: SourceSetContainer by project.extensions
       jacocoAggregateReport {
         sourceSets(sourceSets["main"])
-        mustRunAfter(coveredProject.tasks.withType<Test>())
       }
 
       coverallsJacoco {
         reportSourceSets += sourceSets["main"].allSource.srcDirs
       }
-
-      // Gather executionData when JacocoPlugin is applied.
-      coveredProject.plugins.withType<JacocoPlugin> {
-        jacocoAggregateReport {
-          executionData(
-            coveredProject.tasks.matching {
-              it.extensions.findByType(JacocoTaskExtension::class) != null
-            })
-        }
-      }
     }
   }
+
+testProjects.forEach { project ->
+  jacocoAggregateReport {
+    mustRunAfter(project.tasks.withType<Test>())
+  }
+
+  // Gather executionData when JacocoPlugin is applied.
+  project.plugins.withType<JacocoPlugin> {
+    jacocoAggregateReport {
+      executionData(project.tasks.matching {
+        it.extensions.findByType(JacocoTaskExtension::class) != null
+      })
+    }
+  }
+}

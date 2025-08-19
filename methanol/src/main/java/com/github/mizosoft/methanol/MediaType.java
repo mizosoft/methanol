@@ -55,7 +55,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * #includes(MediaType)} or {@link #isCompatibleWith(MediaType)}, with the latter being symmetric
  * among operands.
  *
- * <p>Case insensitive attributes such as the type, subtype, parameter names or the value of the
+ * <p>Case-insensitive attributes such as the type, subtype, parameter names or the value of the
  * charset parameter are converted into lower-case.
  */
 public final class MediaType {

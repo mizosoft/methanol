@@ -15,11 +15,11 @@ tasks.withType<DokkaMultiModuleTask> {
   }
 }
 
-subprojects.filter { it -> it.isIncludedInAggregateDokka }.forEach { kdocProject ->
-  kdocProject.tasks.withType<DokkaTaskPartial> {
+dokkaDocumentedProjects.forEach { project ->
+  project.tasks.withType<DokkaTaskPartial> {
     dokkaSourceSets.configureEach {
       jdkVersion.set(JAVADOC_JDK_VERSION)
-      subprojects.filter { it -> it.isIncludedInAggregateJavadoc && it != kdocProject }
+      javadocDocumentedProjects.filter { it -> it != project }
         .forEach { javadocProject ->
           externalDocumentationLink("$JAVADOC_URL/${javadocProject.javaModuleName}/")
         }
