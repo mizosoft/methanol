@@ -14,7 +14,7 @@ allprojects {
   version = Version(
     major = 1,
     minor = 8,
-    patch = 3,
+    patch = 4,
     release = if (project.hasProperty("finalRelease")) Version.Release.FINAL else Version.Release.SNAPSHOT
   )
 
