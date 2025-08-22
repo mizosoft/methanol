@@ -1,20 +1,18 @@
 package conventions
 
-import extensions.JAVADOC_JDK_VERSION
-import extensions.classpath
-import extensions.isIncludedInAggregateJavadoc
-import extensions.javaModuleName
-import extensions.standardOptions
+import extensions.*
 
 plugins {
   `java-library`
 }
 
 val aggregateJavadoc by tasks.registering(Javadoc::class) {
-  title = "Methanol $version API"
-  description = "Generates an aggregate Javadoc for all published modules (except benchmarks)."
+  group = "Documentation"
+  description = "Generates an aggregate Javadoc for published modules."
 
-  setDestinationDir(layout.buildDirectory.get().file("docs/aggregateJavadoc").asFile)
+  title = "Methanol $version API"
+
+  destinationDir = layout.buildDirectory.get().file("docs/aggregateJavadoc").asFile
 
   standardOptions {
     links("https://docs.oracle.com/en/java/javase/$JAVADOC_JDK_VERSION/docs/api/")
@@ -57,7 +55,7 @@ val aggregateJavadoc by tasks.registering(Javadoc::class) {
   }
 }
 
-subprojects.filter { it.isIncludedInAggregateJavadoc }
+javadocDocumentedProjects
   .forEach { documentedProject ->
     val sourceSets: SourceSetContainer by documentedProject.extensions
     aggregateJavadoc {

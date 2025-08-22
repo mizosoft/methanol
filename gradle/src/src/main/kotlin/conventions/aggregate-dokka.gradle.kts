@@ -1,10 +1,6 @@
 package conventions
 
-import extensions.JAVADOC_JDK_VERSION
-import extensions.JAVADOC_URL
-import extensions.isIncludedInAggregateDokka
-import extensions.isIncludedInAggregateJavadoc
-import extensions.javaModuleName
+import extensions.*
 import org.jetbrains.dokka.gradle.DokkaMultiModuleFileLayout
 import org.jetbrains.dokka.gradle.DokkaMultiModuleTask
 import org.jetbrains.dokka.gradle.DokkaTaskPartial
@@ -19,11 +15,11 @@ tasks.withType<DokkaMultiModuleTask> {
   }
 }
 
-subprojects.filter { it -> it.isIncludedInAggregateDokka }.forEach { kdocProject ->
-  kdocProject.tasks.withType<DokkaTaskPartial> {
+dokkaDocumentedProjects.forEach { project ->
+  project.tasks.withType<DokkaTaskPartial> {
     dokkaSourceSets.configureEach {
       jdkVersion.set(JAVADOC_JDK_VERSION)
-      subprojects.filter { it -> it.isIncludedInAggregateJavadoc && it != kdocProject }
+      javadocDocumentedProjects.filter { it -> it != project }
         .forEach { javadocProject ->
           externalDocumentationLink("$JAVADOC_URL/${javadocProject.javaModuleName}/")
         }

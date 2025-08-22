@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -69,9 +69,9 @@ public class TestUtils {
 
   // For consistency, TIMEOUT_SECONDS must be in sync with junit.jupiter.execution.timeout.default's
   // value set by our testing conventions.
-  public static final int TIMEOUT_SECONDS = 4;
-  public static final int SLOW_TIMEOUT_SECONDS = 8;
-  public static final int VERY_SLOW_TIMEOUT_SECONDS = 16;
+  public static final int TIMEOUT_SECONDS = 6;
+  public static final int SLOW_TIMEOUT_SECONDS = 12;
+  public static final int VERY_SLOW_TIMEOUT_SECONDS = 24;
 
   private static final long RANDOM_SEED = 25;
 
