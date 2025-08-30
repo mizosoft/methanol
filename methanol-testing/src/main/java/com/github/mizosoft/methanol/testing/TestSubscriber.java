@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -323,6 +323,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
         errorCount++;
         lastError = throwable;
         completion.signalAll();
+        itemsAvailable.signalAll(); // Wake up potential waiters on onNext.
       } finally {
         lock.unlock();
       }
@@ -344,6 +345,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
         check(() -> assertReceivedSubscription("onComplete()"));
         completionCount++;
         completion.signalAll();
+        itemsAvailable.signalAll(); // Wake up potential waiters on onNext.
       } finally {
         lock.unlock();
       }
@@ -496,9 +498,21 @@ public class TestSubscriber<T> implements Subscriber<T> {
     lock.lock();
     try {
       @SuppressWarnings("GuardedBy")
-      BooleanSupplier hasEnoughItems = () -> items.size() >= n;
-      assertThat(await(itemsAvailable, hasEnoughItems, timeout))
-          .withFailMessage("Expected onNext within " + timeout)
+      BooleanSupplier hasEnoughItemsOrCompleted =
+          () -> completionCount > 0 || errorCount > 0 || items.size() >= n;
+      assertThat(await(itemsAvailable, hasEnoughItemsOrCompleted, timeout))
+          .withFailMessage(() -> "Expected onNext or completion within " + timeout)
+          .isTrue();
+      assertThat(items.size() >= n)
+          .withFailMessage(
+              () ->
+                  String.format(
+                      "Expected onNext %d times but got %d then %s",
+                      n,
+                      items.size(),
+                      errorCount > 0
+                          ? "onError(" + exceptionToString(lastError) + ")"
+                          : "onComplete()"))
           .isTrue();
       var polled = new ArrayList<T>();
       for (int i = 0; i < n; i++) {

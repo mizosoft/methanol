@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,17 +30,23 @@ import static org.assertj.core.api.Assertions.assertThatIOException;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.assertj.core.api.Assertions.from;
 
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.TestException;
 import com.github.mizosoft.methanol.testing.TestSubscriberContext;
 import com.github.mizosoft.methanol.testing.TestSubscriberExtension;
+import com.github.mizosoft.methanol.testing.TestUtils;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith(TestSubscriberExtension.class)
+@ExtendWith({TestSubscriberExtension.class, ExecutorExtension.class})
 class WritableBodyPublisherTest {
   private TestSubscriberContext subscriberContext;
 
@@ -78,12 +84,46 @@ class WritableBodyPublisherTest {
     var subscriber = subscriberContext.<ByteBuffer>createSubscriber().autoRequest(0);
     publisher.subscribe(subscriber);
     subscriber.requestItems(1);
-    publisher.outputStream().write('a');
+
+    var out = publisher.outputStream();
+    out.write('a');
     publisher.flush();
     assertThat(subscriber.peekAvailable())
         .singleElement()
         .returns(1, from(ByteBuffer::remaining))
-        .returns((byte) 'a', from(ByteBuffer::get));
+        .returns((byte) 'a', from(buffer -> buffer.get(0)));
+    out.write('b');
+    out.close();
+
+    subscriber.requestItems(1);
+    subscriber.awaitCompletion();
+    assertThat(subscriber.pollAll())
+        .map(ByteBuffer::slice) // Make capacity one to compare equal with buffers below.
+        .containsExactly(ByteBuffer.wrap(new byte[] {'a'}), ByteBuffer.wrap(new byte[] {'b'}));
+  }
+
+  @Test
+  void flushFromOutputStreamAfterWritingWithOutputStream() throws IOException {
+    var publisher = WritableBodyPublisher.create();
+    var subscriber = subscriberContext.<ByteBuffer>createSubscriber().autoRequest(0);
+    publisher.subscribe(subscriber);
+    subscriber.requestItems(1);
+
+    var out = publisher.outputStream();
+    out.write('a');
+    out.flush();
+    assertThat(subscriber.peekAvailable())
+        .singleElement()
+        .returns(1, from(ByteBuffer::remaining))
+        .returns((byte) 'a', from(buffer -> buffer.get(0)));
+    out.write('b');
+    out.close();
+
+    subscriber.requestItems(1);
+    subscriber.awaitCompletion();
+    assertThat(subscriber.pollAll())
+        .map(ByteBuffer::slice) // Make capacity one to compare equal with buffers below.
+        .containsExactly(ByteBuffer.wrap(new byte[] {'a'}), ByteBuffer.wrap(new byte[] {'b'}));
   }
 
   @Test
@@ -92,12 +132,22 @@ class WritableBodyPublisherTest {
     var subscriber = subscriberContext.<ByteBuffer>createSubscriber().autoRequest(0);
     publisher.subscribe(subscriber);
     subscriber.requestItems(1);
-    publisher.byteChannel().write(ByteBuffer.wrap(new byte[] {'a'}));
+
+    var out = publisher.byteChannel();
+    out.write(ByteBuffer.wrap(new byte[] {'a'}));
     publisher.flush();
     assertThat(subscriber.peekAvailable())
         .singleElement()
         .returns(1, from(ByteBuffer::remaining))
-        .returns((byte) 'a', from(ByteBuffer::get));
+        .returns((byte) 'a', from(buffer -> buffer.get(0)));
+    out.write(ByteBuffer.wrap(new byte[] {'b'}));
+    out.close();
+
+    subscriber.requestItems(1);
+    subscriber.awaitCompletion();
+    assertThat(subscriber.pollAll())
+        .map(ByteBuffer::slice) // Make capacity one to compare equal with buffers below.
+        .containsExactly(ByteBuffer.wrap(new byte[] {'a'}), ByteBuffer.wrap(new byte[] {'b'}));
   }
 
   @Test
@@ -198,5 +248,164 @@ class WritableBodyPublisherTest {
       out.write('a');
       assertThat(subscriber.pollNext()).returns(10, from(ByteBuffer::remaining));
     }
+  }
+
+  @Test
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
+  void memoryConsumptionDoesNotExceedQuota(Executor executor)
+      throws IOException, InterruptedException {
+    var memoryTracker =
+        new WritableBodyPublisher.QueuedMemoryTracker() {
+          int queued;
+          int maxQueued;
+
+          @Override
+          public void queued(int size) {
+            queued += size;
+            maxQueued = Math.max(maxQueued, queued);
+          }
+
+          @Override
+          public void dequeued(int size) {
+            queued -= size;
+          }
+        };
+
+    int bufferSize = 64;
+    int quota = WritableBodyPublisher.queuedMemoryQuotaFor(bufferSize);
+    final int totalToWrite = 50 * quota;
+
+    var publisher = WritableBodyPublisher.create(bufferSize, memoryTracker);
+    var subscriber = subscriberContext.<ByteBuffer>createSubscriber().autoRequest(0);
+    publisher.subscribe(subscriber);
+
+    // Simulate a slow reader.
+    var startReader = new CountDownLatch(1);
+    var readerLaunched = new CountDownLatch(1);
+    var readerDone = new CountDownLatch(1);
+    executor.execute(
+        () -> {
+          try {
+            readerLaunched.countDown();
+            TestUtils.awaitUnchecked(startReader);
+            int totalRead = 0;
+            while (totalRead < totalToWrite) {
+              subscriber.requestItems(1);
+              var buffer = subscriber.pollNext();
+              totalRead += buffer.remaining();
+              try {
+                Thread.sleep(2);
+              } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+              }
+            }
+            subscriber.awaitCompletion();
+          } finally {
+            readerDone.countDown();
+          }
+        });
+
+    readerLaunched.await();
+    startReader.countDown();
+
+    // Alternate on buffer sizes.
+    int[] bufferSizes = {bufferSize / 2, bufferSize / 2, bufferSize * 2};
+    int bufferSizesIndex = 0;
+
+    int totalWritten = 0;
+    try (var out = publisher.byteChannel()) {
+      while (totalWritten < totalToWrite) {
+        int toAllocate =
+            Math.min(
+                bufferSizes[bufferSizesIndex++ % bufferSizes.length], totalToWrite - totalWritten);
+        int written = out.write(ByteBuffer.allocate(toAllocate));
+        assertThat(written).isEqualTo(toAllocate);
+        totalWritten += toAllocate;
+      }
+    }
+
+    readerDone.await();
+    assertThat(memoryTracker.maxQueued).isEqualTo(quota);
+  }
+
+  @Test
+  @ExecutorSpec(ExecutorType.CACHED_POOL)
+  void memoryConsumptionDoesNotExceedQuotaWithFlushing(Executor executor)
+      throws IOException, InterruptedException {
+    var memoryTracker =
+        new WritableBodyPublisher.QueuedMemoryTracker() {
+          int queued;
+          int maxQueued;
+
+          @Override
+          public void queued(int size) {
+            queued += size;
+            maxQueued = Math.max(maxQueued, queued);
+          }
+
+          @Override
+          public void dequeued(int size) {
+            queued -= size;
+          }
+        };
+
+    int bufferSize = 64;
+    int quota = WritableBodyPublisher.queuedMemoryQuotaFor(bufferSize);
+    final int totalToWrite = 50 * quota;
+
+    var publisher = WritableBodyPublisher.create(bufferSize, memoryTracker);
+    var subscriber = subscriberContext.<ByteBuffer>createSubscriber().autoRequest(0);
+    publisher.subscribe(subscriber);
+
+    // Simulate a slow reader.
+    var startReader = new CountDownLatch(1);
+    var readerLaunched = new CountDownLatch(1);
+    var readerDone = new CountDownLatch(1);
+    executor.execute(
+        () -> {
+          try {
+            readerLaunched.countDown();
+            TestUtils.awaitUnchecked(startReader);
+            int totalRead = 0;
+            while (totalRead < totalToWrite) {
+              subscriber.requestItems(1);
+              var buffer = subscriber.pollNext();
+              totalRead += buffer.remaining();
+              try {
+                Thread.sleep(2);
+              } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+              }
+            }
+            subscriber.awaitCompletion();
+          } finally {
+            readerDone.countDown();
+          }
+        });
+
+    readerLaunched.await();
+    startReader.countDown();
+
+    // Alternate on buffer sizes.
+    int[] bufferSizes = {bufferSize / 2, bufferSize / 2, bufferSize * 2};
+    int bufferSizesIndex = 0;
+
+    int totalWritten = 0;
+    try (var out = publisher.byteChannel()) {
+      while (totalWritten < totalToWrite) {
+        int toAllocate =
+            Math.min(
+                bufferSizes[bufferSizesIndex++ % bufferSizes.length], totalToWrite - totalWritten);
+        int written = out.write(ByteBuffer.allocate(toAllocate));
+        if (bufferSizesIndex % 2 == 0) {
+          publisher.flush();
+        }
+        assertThat(written).isEqualTo(toAllocate);
+        totalWritten += toAllocate;
+      }
+    }
+
+    readerDone.await();
+    assertThat(memoryTracker.maxQueued).isEqualTo(quota);
   }
 }
