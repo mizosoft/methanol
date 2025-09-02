@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,7 @@ package com.github.mizosoft.methanol.internal;
 public class DebugUtils {
   private DebugUtils() {}
 
-  @SuppressWarnings({"AssertWithSideEffects", "ConstantConditions"})
+  @SuppressWarnings({"AssertWithSideEffects", "ConstantConditions", "AssignmentExpression"})
   public static boolean isAssertionsEnabled() {
     boolean b = false;
     assert b = true; // This sets b to true if assertion is enabled.

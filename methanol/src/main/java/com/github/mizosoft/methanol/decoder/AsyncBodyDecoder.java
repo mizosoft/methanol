@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol.decoder;
 
+import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
 import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
@@ -200,7 +201,7 @@ public final class AsyncBodyDecoder<T> implements BodyDecoder<T> {
   private SubscriptionImpl subscription() {
     var subscription = downstreamSubscription;
     requireState(subscription != null, "onSubscribe() expected");
-    return subscription;
+    return castNonNull(subscription);
   }
 
   /** A {@code ByteSource} that maintains a queue of buffers consumed sequentially. */

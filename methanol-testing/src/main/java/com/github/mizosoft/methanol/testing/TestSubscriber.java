@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol.testing;
 
+import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -441,7 +442,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
           .withFailMessage("Expected onSubscribe within " + timeout)
           .isTrue();
 
-      var localSubscription = subscription;
+      var localSubscription = castNonNull(subscription);
       return new Subscription() {
         @Override
         public void request(long n) {
@@ -494,13 +495,15 @@ public class TestSubscriber<T> implements Subscriber<T> {
     return pollNext(n, DEFAULT_TIMEOUT);
   }
 
+  @SuppressWarnings("GuardedBy")
   public List<T> pollNext(int n, Duration timeout) {
     lock.lock();
     try {
-      @SuppressWarnings("GuardedBy")
-      BooleanSupplier hasEnoughItemsOrCompleted =
-          () -> completionCount > 0 || errorCount > 0 || items.size() >= n;
-      assertThat(await(itemsAvailable, hasEnoughItemsOrCompleted, timeout))
+      assertThat(
+              await(
+                  itemsAvailable,
+                  () -> completionCount > 0 || errorCount > 0 || items.size() >= n,
+                  timeout))
           .withFailMessage(() -> "Expected onNext or completion within " + timeout)
           .isTrue();
       assertThat(items.size() >= n)
@@ -510,7 +513,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
                       "Expected onNext %d times but got %d then %s",
                       n,
                       items.size(),
-                      errorCount > 0
+                      lastError != null
                           ? "onError(" + exceptionToString(lastError) + ")"
                           : "onComplete()"))
           .isTrue();
@@ -542,7 +545,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
           .withFailMessage(
               () ->
                   "Expected onComplete() but got onError("
-                      + exceptionToString(localLastError)
+                      + exceptionToString(castNonNull(localLastError))
                       + ")")
           .isNull();
     } finally {
@@ -567,7 +570,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
       assertThat(lastError)
           .withFailMessage("Expected onError(Throwable) but got onComplete()")
           .isNotNull();
-      return localLastError;
+      return castNonNull(localLastError);
     } finally {
       lock.unlock();
     }

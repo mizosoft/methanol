@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -549,6 +549,7 @@ public final class MultipartBodyPublisher implements MimeBodyPublisher {
       return UTF_8.encode(CharBuffer.wrap(metadata));
     }
 
+    @SuppressWarnings("AssignmentExpression")
     private boolean subscribeTo(BodyPublisher bodyPublisher) {
       var currentSubscriber = partSubscriber;
       PartSubscriber nextSubscriber;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 class RedisSupport {
@@ -44,7 +43,7 @@ class RedisSupport {
   static final String CLI_CMD = "redis-cli";
 
   @GuardedBy("RedisSupport.class")
-  private static final @MonotonicNonNull Set<String> AVAILABLE_COMMANDS = checkAvailability();
+  private static final Set<String> AVAILABLE_COMMANDS = checkAvailability();
 
   private RedisSupport() {}
 

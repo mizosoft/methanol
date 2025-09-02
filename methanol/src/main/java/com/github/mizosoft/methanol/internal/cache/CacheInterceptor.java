@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -711,7 +711,7 @@ public final class CacheInterceptor implements Interceptor {
           .whenComplete(this::handleBackgroundRevalidation);
     }
 
-    @SuppressWarnings({"NullAway", "FutureValueIsIgnored"})
+    @SuppressWarnings({"NullAway", "FutureReturnValueIgnored"})
     private void handleBackgroundRevalidation(
         @Nullable RawResponse response, @Nullable Throwable exception) {
       assert response != null ^ exception != null;

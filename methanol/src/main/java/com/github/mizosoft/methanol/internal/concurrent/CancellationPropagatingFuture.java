@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,8 @@
 
 package com.github.mizosoft.methanol.internal.concurrent;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
@@ -30,7 +32,7 @@ import java.util.function.Function;
 
 /**
  * A {@link CompletableFuture} that propagates cancellation to an upstream when a node in the
- * dependency tree starting from this future is cancelled.
+ * dependency tree starting from this future is canceled.
  */
 public final class CancellationPropagatingFuture<T> extends CompletableFuture<T> {
   /*
@@ -42,7 +44,7 @@ public final class CancellationPropagatingFuture<T> extends CompletableFuture<T>
    * given function.
    *
    * The goal is for cancellation to inevitably reach the HTTP client whichever returned future
-   * is cancelled. The HTTP client's future makes sure that this is the case if we start with it as
+   * is canceled. The HTTP client's future makes sure that this is the case if we start with it as
    * the root, but we usually introduce this future inside a thenCompose(...), which messes with the
    * built-in cancellation mechanism.
    */
@@ -57,13 +59,15 @@ public final class CancellationPropagatingFuture<T> extends CompletableFuture<T>
   }
 
   private CancellationPropagatingFuture(CompletableFuture<Boolean> cancellation) {
-    this.cancellation = cancellation;
+    this.cancellation = requireNonNull(cancellation);
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void propagateCancellationTo(CompletionStage<?> stage) {
     cancellation.thenAccept(stage.toCompletableFuture()::cancel);
   }
 
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void propagateCancellationTo(Consumer<Boolean> cancellable) {
     cancellation.thenAccept(cancellable);
   }

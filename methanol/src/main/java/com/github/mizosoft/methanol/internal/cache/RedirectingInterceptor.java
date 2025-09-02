@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,6 +35,7 @@ import com.github.mizosoft.methanol.internal.extensions.Handlers;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.lang.System.Logger;
 import java.net.URI;
 import java.net.http.HttpClient.Redirect;
 import java.net.http.HttpHeaders;
@@ -64,6 +65,8 @@ public final class RedirectingInterceptor implements Interceptor {
   private static final int DEFAULT_MAX_REDIRECTS = 5;
   private static final int MAX_REDIRECTS =
       Integer.getInteger("jdk.httpclient.redirects.retrylimit", DEFAULT_MAX_REDIRECTS);
+
+  private static final Logger logger = System.getLogger(Handlers.class.getName());
 
   private final Redirect policy;
 
@@ -118,6 +121,7 @@ public final class RedirectingInterceptor implements Interceptor {
       return chainAdapter.forward(request).thenCompose(this::exchange);
     }
 
+    @SuppressWarnings("FutureReturnValueIgnored")
     CompletableFuture<HttpResponse<Publisher<List<ByteBuffer>>>> exchange(
         HttpResponse<Publisher<List<ByteBuffer>>> response) {
       HttpRequest redirectRequest;
@@ -128,7 +132,14 @@ public final class RedirectingInterceptor implements Interceptor {
       }
 
       // Properly release the redirecting response body.
-      Handlers.handleAsync(response, BodyHandlers.discarding(), handlerExecutor);
+      Handlers.handleAsync(response, BodyHandlers.discarding(), handlerExecutor)
+          .whenComplete(
+              (__, ex) -> {
+                if (ex != null) {
+                  logger.log(
+                      Logger.Level.WARNING, "Exception while releasing redirecting response", ex);
+                }
+              });
 
       // Follow redirection.
       return chainAdapter
@@ -141,7 +152,7 @@ public final class RedirectingInterceptor implements Interceptor {
                           .build()));
     }
 
-    public @Nullable HttpRequest createRedirectRequest(HttpResponse<?> response) {
+    private @Nullable HttpRequest createRedirectRequest(HttpResponse<?> response) {
       if (policy == Redirect.NEVER) {
         return null;
       }

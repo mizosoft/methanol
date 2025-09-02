@@ -258,6 +258,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
     return false;
   }
 
+  @SuppressWarnings("AssignmentExpression")
   private void drain() {
     int s;
     var d = downstream;
@@ -268,8 +269,8 @@ public abstract class AbstractSubscription<T> implements Subscription {
       if ((s & ERROR) != 0) {
         var exception =
             (Throwable) PENDING_EXCEPTION.getAndSet(this, ConsumedPendingException.INSTANCE);
-        cancelOnError(
-            d, castNonNull(exception), !(exception instanceof NonPositiveRequestException));
+        boolean flowInterrupted = exception instanceof NonPositiveRequestException;
+        cancelOnError(d, castNonNull(exception), flowInterrupted);
       } else if ((emitted = guardedEmit(d, r - x)) > 0L) {
         x += emitted;
       } else if (emitted < 0) {

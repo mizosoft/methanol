@@ -263,6 +263,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     }
   }
 
+  @SuppressWarnings("AssignmentExpression")
   private void fireOrKeepAliveOnNextIf(boolean condition) {
     State currentState;
     if (condition && (currentState = state) instanceof Subscribed) {

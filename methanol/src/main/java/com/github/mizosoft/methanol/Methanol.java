@@ -270,6 +270,7 @@ public class Methanol extends HttpClient {
     return userAgent;
   }
 
+  /** Returns this client's base URI. */
   public Optional<URI> baseUri() {
     return baseUri;
   }
@@ -531,7 +532,7 @@ public class Methanol extends HttpClient {
     }
 
     // @Override
-    @SuppressWarnings({"Since15", "UnusedMethod"})
+    @SuppressWarnings({"Since15", "UnusedMethod", "EffectivelyPrivate"})
     public void shutdown() {
       try {
         castNonNull(SHUTDOWN).invokeExact(underlyingClient());
@@ -542,7 +543,7 @@ public class Methanol extends HttpClient {
     }
 
     // @Override
-    @SuppressWarnings({"Since15", "UnusedMethod"})
+    @SuppressWarnings({"Since15", "UnusedMethod", "EffectivelyPrivate"})
     public boolean awaitTermination(Duration duration) throws InterruptedException {
       try {
         return (boolean) castNonNull(AWAIT_TERMINATION).invokeExact(underlyingClient(), duration);
@@ -556,7 +557,7 @@ public class Methanol extends HttpClient {
     }
 
     // @Override
-    @SuppressWarnings({"Since15", "UnusedMethod"})
+    @SuppressWarnings({"Since15", "UnusedMethod", "EffectivelyPrivate"})
     public boolean isTerminated() {
       try {
         return (boolean) castNonNull(IS_TERMINATED).invokeExact(underlyingClient());
@@ -567,7 +568,7 @@ public class Methanol extends HttpClient {
     }
 
     // @Override
-    @SuppressWarnings({"Since15", "UnusedMethod"})
+    @SuppressWarnings({"Since15", "UnusedMethod", "EffectivelyPrivate"})
     public void shutdownNow() {
       try {
         castNonNull(SHUTDOWN_NOW).invokeExact(underlyingClient());
@@ -578,7 +579,7 @@ public class Methanol extends HttpClient {
     }
 
     // @Override
-    @SuppressWarnings("UnusedMethod")
+    @SuppressWarnings({"UnusedMethod", "EffectivelyPrivate"})
     public void close() {
       try {
         castNonNull(CLOSE).invokeExact(underlyingClient());
@@ -1066,7 +1067,7 @@ public class Methanol extends HttpClient {
       // the compiler doesn't generate a synthetic method with the overridden function's signature
       // because it didn't exist while compiling.
       // @Override
-      @SuppressWarnings({"Since15", "UnusedMethod"})
+      @SuppressWarnings({"Since15", "UnusedMethod", "EffectivelyPrivate"})
       public HttpClient.Builder localAddress(InetAddress localAddr) {
         try {
           castNonNull(LOCAL_ADDRESS).invoke(backendBuilder, localAddr);

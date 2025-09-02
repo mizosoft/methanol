@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -499,7 +499,8 @@ public interface BodyAdapter {
         public Map<Class<?>, Object> toMap() {
           var map = lazyMap;
           if (map == null) {
-            var lambdaMap = map = new HashMap<>();
+            map = new HashMap<>();
+            var lambdaMap = map;
             mediaType.ifPresent(mediaType -> lambdaMap.put(MediaType.class, mediaType));
             request.ifPresent(request -> lambdaMap.put(HttpRequest.class, request));
             responseInfo.ifPresent(responseInfo -> lambdaMap.put(ResponseInfo.class, responseInfo));
