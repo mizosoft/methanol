@@ -44,6 +44,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith({TestSubscriberExtension.class, ExecutorExtension.class})
@@ -252,6 +253,7 @@ class WritableBodyPublisherTest {
 
   @Test
   @ExecutorSpec(ExecutorType.CACHED_POOL)
+  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   void memoryConsumptionDoesNotExceedQuota(Executor executor)
       throws IOException, InterruptedException {
     var memoryTracker =
@@ -330,6 +332,7 @@ class WritableBodyPublisherTest {
 
   @Test
   @ExecutorSpec(ExecutorType.CACHED_POOL)
+  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   void memoryConsumptionDoesNotExceedQuotaWithFlushing(Executor executor)
       throws IOException, InterruptedException {
     var memoryTracker =

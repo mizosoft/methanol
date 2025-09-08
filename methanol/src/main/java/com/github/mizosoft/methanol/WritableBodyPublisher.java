@@ -452,9 +452,9 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
 
           written += Utils.copyRemaining(src, sinkBuffer);
           if (!sinkBuffer.hasRemaining()) {
-            // Block for queue space.
             var readableBuffer = sinkBuffer.flip().asReadOnlyBuffer();
             try {
+              // Block for queue space.
               while (queuedMemory > queuedMemoryQuota - readableBuffer.remaining()) {
                 hasQueuedMemoryQuota.await();
               }
