@@ -40,7 +40,7 @@ moshi = "1.15.2"
 versions-plugin = "0.52.0"
 nexus-publish = "2.0.0"
 protobuf-plugin = "0.9.5"
-shadow-plugin = "8.1.1"
+shadow-plugin = "9.1.0"
 extraJavaModuleInfo-plugin = "1.13"
 javafx-plugin = "0.1.0"
 checkerframework-plugin = "0.6.56"
@@ -113,7 +113,7 @@ versions = { id = "com.github.ben-manes.versions", version.ref = "versions-plugi
 protobuf = { id = "com.google.protobuf", version.ref = "protobuf-plugin" }
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
 spring-dependency-management = { id = "io.spring.dependency-management" }
-shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow-plugin" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow-plugin" }
 extraJavaModuleInfo = { id = "org.gradlex.extra-java-module-info", version.ref = "extraJavaModuleInfo-plugin" }
 javafx = { id = "org.openjfx.javafxplugin", version.ref = "javafx-plugin" }
 nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus-publish" }
