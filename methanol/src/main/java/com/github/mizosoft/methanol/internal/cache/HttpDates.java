@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,6 +35,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.time.temporal.TemporalQueries;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 /** Helpers for parsing/formatting HTTP dates. */
@@ -48,7 +49,12 @@ public class HttpDates {
   private static final List<DateTimeFormatter> FORMATTERS;
 
   static {
-    PREFERRED_FORMATTER = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss 'GMT'");
+    // Note that we need to create formatters with the US locale explicitly as they'll use the
+    // default locale (e.g. system language) otherwise, which is not what we want (see
+    // https://github.com/mizosoft/methanol/issues/134).
+
+    PREFERRED_FORMATTER =
+        DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss 'GMT'").withLocale(Locale.US);
 
     // These are the formats specified by rfc7231 Section 7.1.1.1 for acceptable HTTP dates.
     FORMATTERS =
@@ -57,14 +63,16 @@ public class HttpDates {
             PREFERRED_FORMATTER,
 
             // Obsolete formats, but allowed by rfc7231.
-            DateTimeFormatter.ofPattern("EEEE, dd-MMM-uu HH:mm:ss 'GMT'"), // rfc850
-            DateTimeFormatter.ofPattern("EEE MMM ppd HH:mm:ss uuuu"), // C's asctime()
+            DateTimeFormatter.ofPattern("EEEE, dd-MMM-uu HH:mm:ss 'GMT'")
+                .withLocale(Locale.US), // rfc850
+            DateTimeFormatter.ofPattern("EEE MMM ppd HH:mm:ss uuuu")
+                .withLocale(Locale.US), // C's asctime()
 
             // A lenient version of the preferred format, with the possibility of zone offsets.
-            DateTimeFormatter.RFC_1123_DATE_TIME,
+            DateTimeFormatter.RFC_1123_DATE_TIME.withLocale(Locale.US),
 
             // The preferred format but with UTC instead of GMT.
-            DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss 'UTC'"));
+            DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss 'UTC'").withLocale(Locale.US));
   }
 
   private HttpDates() {}
