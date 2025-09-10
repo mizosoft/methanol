@@ -362,7 +362,9 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns an immutable list of this client's <a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html#backendInterceptor(com.github.mizosoft.methanol.Methanol.Interceptor)"><code>backend interceptors</code></a>.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#baseUri()" class="member-name-link">baseUri()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
-<dd>&nbsp;</dd>
+<dd>
+<div class="block">Returns this client's base URI.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html#baseUri(java.lang.String)" class="member-name-link">baseUri(String)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html" title="class in com.github.mizosoft.methanol">Methanol.BaseBuilder</a></dt>
 <dd>
 <div class="block">Sets the base <code>URI</code> with which each outgoing requests' <code>URI</code> is <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/net/URI.html#resolve(java.net.URI)" title="class or interface in java.net" class="external-link"><code>resolved</code></a>.</div>
@@ -728,7 +730,7 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/concurrent/CancellationPropagatingFuture.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.concurrent">CancellationPropagatingFuture&lt;T&gt;</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/concurrent/package-summary.html">com.github.mizosoft.methanol.internal.concurrent</a></dt>
 <dd>
 <div class="block">A <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/CompletableFuture.html" title="class or interface in java.util.concurrent" class="external-link"><code>CompletableFuture</code></a> that propagates cancellation to an upstream when a node in the
- dependency tree starting from this future is cancelled.</div>
+ dependency tree starting from this future is canceled.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#cancelOnComplete(java.util.concurrent.Flow.Subscriber)" class="member-name-link">cancelOnComplete(Flow.Subscriber&lt;? super T&gt;)</a> - Method in class com.github.mizosoft.methanol.internal.flow.<a href="methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html" title="class in com.github.mizosoft.methanol.internal.flow">AbstractSubscription</a></dt>
 <dd>
@@ -1150,7 +1152,8 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/WritableBodyPublisher.html#create(int)" class="member-name-link">create(int)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/WritableBodyPublisher.html" title="class in com.github.mizosoft.methanol">WritableBodyPublisher</a></dt>
 <dd>
-<div class="block">Returns a new <code>WritableBodyPublisher</code> with the given buffer size.</div>
+<div class="block">Returns a new <code>WritableBodyPublisher</code> with the given buffer size (number of bytes to
+ buffer before making them available to the HTTP client).</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#create(java.lang.String)" class="member-name-link">create(String)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>
@@ -1892,6 +1895,8 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/ExecutorContext.html#%3Cinit%3E()" class="member-name-link">ExecutorContext()</a> - Constructor for class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/ExecutorContext.html" title="class in com.github.mizosoft.methanol.testing">ExecutorContext</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/ExecutorContext.html#%3Cinit%3E(java.lang.String)" class="member-name-link">ExecutorContext(String)</a> - Constructor for class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/ExecutorContext.html" title="class in com.github.mizosoft.methanol.testing">ExecutorContext</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/ExecutorExtension.html" class="type-name-link" title="class in com.github.mizosoft.methanol.testing">ExecutorExtension</a> - Class in <a href="methanol.testing/com/github/mizosoft/methanol/testing/package-summary.html">com.github.mizosoft.methanol.testing</a></dt>
 <dd>
 <div class="block"><code>Extension</code> that provides <code>Executors</code> and terminates them after tests.</div>
@@ -1987,7 +1992,7 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/WritableBodyPublisher.html#flush()" class="member-name-link">flush()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/WritableBodyPublisher.html" title="class in com.github.mizosoft.methanol">WritableBodyPublisher</a></dt>
 <dd>
-<div class="block">Makes any buffered content available for consumption by the downstream.</div>
+<div class="block">Makes any buffered content available for consumption by downstream.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#followRedirects()" class="member-name-link">followRedirects()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
 <dd>&nbsp;</dd>
