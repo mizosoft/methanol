@@ -6,6 +6,7 @@ plugins {
   id("conventions.aggregate-dokka")
   id("conventions.aggregate-testing")
   alias(libs.plugins.nexus.publish)
+  alias(libs.plugins.versions)
 }
 
 allprojects {
