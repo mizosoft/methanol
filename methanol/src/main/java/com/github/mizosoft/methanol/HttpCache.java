@@ -1131,7 +1131,7 @@ public final class HttpCache implements AutoCloseable, Flushable {
     private InternalStorageExtension storageExtension() {
       var storeExtension = this.storageExtension;
       requireState(storeExtension != null, "A storage backend must be specified");
-      return storeExtension;
+      return castNonNull(storeExtension);
     }
 
     /**

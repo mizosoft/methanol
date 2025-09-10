@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -92,7 +92,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
       getAndAddDemand(this, DEMAND, n);
       fireOrKeepAlive();
     } else {
-      fireOrKeepAliveOnError(FlowSupport.illegalRequest());
+      fireOrKeepAliveOnError(new NonPositiveRequestException(n));
     }
   }
 
@@ -258,6 +258,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
     return false;
   }
 
+  @SuppressWarnings("AssignmentExpression")
   private void drain() {
     int s;
     var d = downstream;
@@ -268,7 +269,8 @@ public abstract class AbstractSubscription<T> implements Subscription {
       if ((s & ERROR) != 0) {
         var exception =
             (Throwable) PENDING_EXCEPTION.getAndSet(this, ConsumedPendingException.INSTANCE);
-        cancelOnError(d, castNonNull(exception), false);
+        boolean flowInterrupted = exception instanceof NonPositiveRequestException;
+        cancelOnError(d, castNonNull(exception), flowInterrupted);
       } else if ((emitted = guardedEmit(d, r - x)) > 0L) {
         x += emitted;
       } else if (emitted < 0) {
@@ -311,6 +313,12 @@ public abstract class AbstractSubscription<T> implements Subscription {
 
     private ConsumedPendingException() {
       super("", null, false, false);
+    }
+  }
+
+  private static final class NonPositiveRequestException extends IllegalArgumentException {
+    NonPositiveRequestException(long request) {
+      super("Non-positive subscription request: " + request);
     }
   }
 }

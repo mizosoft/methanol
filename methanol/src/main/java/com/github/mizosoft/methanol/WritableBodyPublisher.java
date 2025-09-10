@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,12 +27,14 @@ import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.Utils;
-import com.github.mizosoft.methanol.internal.flow.AbstractQueueSubscription;
+import com.github.mizosoft.methanol.internal.flow.AbstractPollableSubscription;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.io.Flushable;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.net.http.HttpRequest.BodyPublisher;
@@ -42,12 +44,15 @@ import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.Channels;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.WritableByteChannel;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.ArrayDeque;
+import java.util.Queue;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BooleanSupplier;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -78,15 +83,10 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     }
   }
 
-  private static final ByteBuffer CLOSED_SENTINEL = ByteBuffer.allocate(0);
-  private static final int DEFAULT_BUFFER_SIZE = Utils.BUFFER_SIZE;
+  private static final int SIGNALS_AVAILABLE_BIT = 1 << 31;
 
-  /** A lock that serializes writing to {@code pipe}. */
-  private final Lock writeLock = new ReentrantLock();
-
-  private final ConcurrentLinkedQueue<ByteBuffer> pipe = new ConcurrentLinkedQueue<>();
   private final AtomicBoolean subscribed = new AtomicBoolean();
-  private final int bufferSize;
+  private final Stream stream;
 
   @SuppressWarnings("FieldMayBeFinal") // VarHandle indirection.
   private State state = Initial.INSTANCE;
@@ -123,17 +123,14 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     }
   }
 
-  @GuardedBy("writeLock")
-  private @Nullable ByteBuffer sinkBuffer;
-
   private @MonotonicNonNull WritableByteChannel lazyChannel;
   private @MonotonicNonNull OutputStream lazyOutputStream;
 
-  private volatile boolean submittedSentinel;
-
-  private WritableBodyPublisher(int bufferSize) {
-    requireArgument(bufferSize > 0, "non-positive buffer size");
-    this.bufferSize = bufferSize;
+  private WritableBodyPublisher(int bufferSize, int memoryQuota, QueuedMemoryTracker tracker) {
+    requireArgument(bufferSize > 0, "Non-positive bufferSize");
+    requireArgument(memoryQuota > 0, "Non-positive maxBufferedBytes");
+    requireArgument(memoryQuota >= bufferSize, "memoryQuota < bufferSize");
+    this.stream = new Stream(bufferSize, memoryQuota, this::isClosed, requireNonNull(tracker));
   }
 
   /** Returns a {@code WritableByteChannel} for writing this body's content. */
@@ -184,6 +181,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
       }
     }
 
+    stream.close(true);
     if (prevState instanceof Subscribed) {
       ((Subscribed) prevState).subscription.fireOrKeepAliveOnError(exception);
     }
@@ -208,7 +206,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
       }
     }
 
-    submitSentinel();
+    stream.close(false);
     if (prevState instanceof Subscribed) {
       ((Subscribed) prevState).subscription.fireOrKeepAlive();
     }
@@ -223,14 +221,19 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
   }
 
   /**
-   * Makes any buffered content available for consumption by the downstream.
+   * Makes any buffered content available for consumption by downstream.
    *
    * @throws IllegalStateException if closed
+   * @throws UncheckedIOException if an interruption occurs while waiting
    */
   @Override
   public void flush() {
-    requireState(!isClosed(), "closed");
-    fireOrKeepAliveOnNextIf(flushBuffer());
+    requireState(!isClosed(), "Closed");
+    try {
+      fireOrKeepAliveOnNextIf(stream.flush());
+    } catch (InterruptedIOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   @Override
@@ -251,10 +254,6 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
           if (exception != null) {
             subscription.fireOrKeepAliveOnError(exception);
           } else {
-            // As close() submits the sentinel value AFTER setting the state, we must double-check
-            // the sentinel has been submitted before starting the subscription. Otherwise, the
-            // subscription might miss the sentinel submitted by close().
-            submitSentinel();
             subscription.fireOrKeepAlive();
           }
         }
@@ -264,6 +263,7 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     }
   }
 
+  @SuppressWarnings("AssignmentExpression")
   private void fireOrKeepAliveOnNextIf(boolean condition) {
     State currentState;
     if (condition && (currentState = state) instanceof Subscribed) {
@@ -271,96 +271,53 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
     }
   }
 
-  private boolean flushBuffer() {
-    writeLock.lock();
-    try {
-      return unguardedFlushBuffer();
-    } finally {
-      writeLock.unlock();
-    }
-  }
-
-  @GuardedBy("writeLock")
-  private boolean unguardedFlushBuffer() {
-    var buffer = sinkBuffer;
-    if (buffer != null && buffer.position() > 0) {
-      sinkBuffer = null;
-      pipe.add(buffer.flip().asReadOnlyBuffer());
-      return true;
-    }
-    return false;
-  }
-
-  private void submitSentinel() {
-    if (!submittedSentinel) {
-      writeLock.lock();
-      try {
-        if (!submittedSentinel) {
-          submittedSentinel = true;
-          flushBuffer();
-          pipe.add(CLOSED_SENTINEL);
-        }
-      } finally {
-        writeLock.unlock();
-      }
-    }
-  }
-
   /** Returns a new {@code WritableBodyPublisher}. */
   public static WritableBodyPublisher create() {
-    return new WritableBodyPublisher(DEFAULT_BUFFER_SIZE);
+    return create(Utils.BUFFER_SIZE, NoopQueuedMemoryTracker.INSTANCE);
   }
 
-  /** Returns a new {@code WritableBodyPublisher} with the given buffer size. */
+  /**
+   * Returns a new {@code WritableBodyPublisher} with the given buffer size (number of bytes to
+   * buffer before making them available to the HTTP client).
+   */
   public static WritableBodyPublisher create(int bufferSize) {
-    return new WritableBodyPublisher(bufferSize);
+    return create(bufferSize, NoopQueuedMemoryTracker.INSTANCE);
+  }
+
+  // For testing.
+  interface QueuedMemoryTracker {
+    void queued(int size);
+
+    void dequeued(int size);
+  }
+
+  private enum NoopQueuedMemoryTracker implements QueuedMemoryTracker {
+    INSTANCE;
+
+    @Override
+    public void queued(int size) {}
+
+    @Override
+    public void dequeued(int size) {}
+  }
+
+  static WritableBodyPublisher create(int bufferSize, QueuedMemoryTracker queuedMemoryTracker) {
+    return new WritableBodyPublisher(
+        bufferSize, queuedMemoryQuotaFor(bufferSize), queuedMemoryTracker);
+  }
+
+  static int queuedMemoryQuotaFor(int bufferSize) {
+    return Math.multiplyExact(FlowSupport.prefetch(), bufferSize);
   }
 
   private final class SinkChannel implements WritableByteChannel {
     SinkChannel() {}
 
     @Override
-    public int write(ByteBuffer src) throws ClosedChannelException {
-      requireNonNull(src);
-      if (isClosed()) {
-        throw new ClosedChannelException();
-      }
-      if (!src.hasRemaining()) {
-        return 0;
-      }
-
-      int written = 0;
-      boolean signalsAvailable = false;
-      writeLock.lock();
-      try {
-        var buffer = sinkBuffer;
-        do {
-          if (buffer == null) {
-            buffer = ByteBuffer.allocate(bufferSize);
-          }
-          written += Utils.copyRemaining(src, buffer);
-          if (!buffer.hasRemaining()) {
-            pipe.add(buffer.flip().asReadOnlyBuffer());
-            signalsAvailable = true;
-            buffer = null;
-          }
-        } while (src.hasRemaining() && isOpen());
-
-        if (isClosed()) { // Check if asynchronously closed.
-          sinkBuffer = null;
-          if (written <= 0) { // Only report if no bytes were written.
-            throw new AsynchronousCloseException();
-          }
-          return written;
-        } else {
-          sinkBuffer = buffer;
-        }
-      } finally {
-        writeLock.unlock();
-      }
-
-      fireOrKeepAliveOnNextIf(signalsAvailable);
-      return written;
+    public int write(ByteBuffer src) throws IOException {
+      int written = stream.write(src);
+      fireOrKeepAliveOnNextIf((written & SIGNALS_AVAILABLE_BIT) != 0);
+      return written & ~SIGNALS_AVAILABLE_BIT;
     }
 
     @Override
@@ -401,35 +358,227 @@ public final class WritableBodyPublisher implements BodyPublisher, Flushable, Au
         WritableBodyPublisher.this.flush();
       } catch (IllegalStateException e) {
         // Throw a more appropriate exception for an OutputStream.
-        throw new IOException("closed", e);
+        throw new IOException("Closed", e);
       }
     }
 
     @Override
-    public void close() throws IOException {
-      out.close();
+    public void close() {
+      WritableBodyPublisher.this.close();
     }
   }
 
-  private final class SubscriptionImpl extends AbstractQueueSubscription<ByteBuffer> {
+  private final class SubscriptionImpl extends AbstractPollableSubscription<ByteBuffer> {
     SubscriptionImpl(Subscriber<? super ByteBuffer> downstream) {
-      super(downstream, FlowSupport.SYNC_EXECUTOR, pipe, CLOSED_SENTINEL);
+      super(downstream, FlowSupport.SYNC_EXECUTOR);
+    }
+
+    @Override
+    protected @Nullable ByteBuffer poll() {
+      return stream.poll();
+    }
+
+    @Override
+    protected boolean isComplete() {
+      return stream.isComplete();
     }
 
     @Override
     protected void abort(boolean flowInterrupted) {
-      pipe.clear();
+      // Make sure we reflect unexpected cancellations (e.g. subscriber failures) on the stream.
+      while (true) {
+        var currentState = state;
+        if (currentState instanceof Closed) {
+          return;
+        }
 
-      // Make sure state also reflects unexpected cancellations. This also allows a possibly active
-      // writer to detect asynchronous closure.
-      if (flowInterrupted) {
-        while (true) {
-          var currentState = state;
-          if (!(currentState instanceof Subscribed)
-              || STATE.compareAndSet(WritableBodyPublisher.this, currentState, Closed.normally())) {
-            return;
+        if (STATE.compareAndSet(WritableBodyPublisher.this, currentState, Closed.normally())) {
+          stream.close(flowInterrupted);
+          return;
+        }
+      }
+    }
+  }
+
+  private static final class Stream {
+    private final Lock lock = new ReentrantLock();
+    private final Condition hasQueuedMemoryQuota = lock.newCondition();
+
+    /** A lock that serializes writing to {@code pipe}. */
+    @GuardedBy("lock")
+    private final Queue<ByteBuffer> queue = new ArrayDeque<>();
+
+    private final QueuedMemoryTracker queuedMemoryTracker;
+
+    /** Checks whether the publisher is closed. Used for checking asynchronous closure. */
+    private final BooleanSupplier isClosed;
+
+    private final int queuedMemoryQuota;
+    private final int bufferSize;
+
+    @GuardedBy("lock")
+    private int queuedMemory;
+
+    @GuardedBy("lock")
+    private @Nullable ByteBuffer sinkBuffer;
+
+    Stream(
+        int bufferSize,
+        int queuedMemoryQuota,
+        BooleanSupplier isClosed,
+        QueuedMemoryTracker queuedMemoryTracker) {
+      this.bufferSize = bufferSize;
+      this.queuedMemoryQuota = queuedMemoryQuota;
+      this.isClosed = isClosed;
+      this.queuedMemoryTracker = queuedMemoryTracker;
+    }
+
+    int write(ByteBuffer src) throws IOException {
+      if (isClosed.getAsBoolean()) {
+        throw new ClosedChannelException();
+      }
+      if (!src.hasRemaining()) {
+        return 0;
+      }
+
+      int written = 0;
+      boolean signalsAvailable = false;
+      lock.lock();
+      try {
+        do {
+          if (sinkBuffer == null) {
+            sinkBuffer = ByteBuffer.allocate(bufferSize);
+          }
+
+          written += Utils.copyRemaining(src, sinkBuffer);
+          if (!sinkBuffer.hasRemaining()) {
+            var readableBuffer = sinkBuffer.flip().asReadOnlyBuffer();
+            try {
+              // Block for queue space.
+              while (queuedMemory > queuedMemoryQuota - readableBuffer.remaining()) {
+                hasQueuedMemoryQuota.await();
+              }
+            } catch (InterruptedException e) {
+              throw Utils.toInterruptedIOException(e);
+            }
+
+            // We might've been closed while waiting for space.
+            if (isClosed.getAsBoolean()) {
+              signalsAvailable = false;
+              break;
+            }
+
+            sinkBuffer = null;
+            queue.add(readableBuffer);
+            queuedMemory += readableBuffer.remaining();
+            queuedMemoryTracker.queued(readableBuffer.remaining());
+            signalsAvailable = true;
+          }
+        } while (src.hasRemaining() && !isClosed.getAsBoolean());
+
+        if (isClosed.getAsBoolean()) { // Check if asynchronously closed.
+          signalsAvailable = false;
+          if (written <= 0) { // Only report if no bytes were written.
+            throw new AsynchronousCloseException();
           }
         }
+        return written | (signalsAvailable ? SIGNALS_AVAILABLE_BIT : 0);
+      } finally {
+        lock.unlock();
+      }
+    }
+
+    boolean flush() throws InterruptedIOException {
+      lock.lock();
+      try {
+        return flush(false);
+      } finally {
+        lock.unlock();
+      }
+    }
+
+    @GuardedBy("lock")
+    private boolean flush(boolean closing) throws InterruptedIOException {
+      var buffer = sinkBuffer;
+      if (buffer == null || buffer.position() == 0) {
+        return false;
+      }
+
+      // Only wait for space if we're not closing. Otherwise, this will be the last buffer to push
+      // so there is no need to thwart.
+      var remainingSlice = buffer.slice();
+      var readableBuffer = buffer.flip().asReadOnlyBuffer();
+      if (!closing) {
+        try {
+          while (queuedMemory > queuedMemoryQuota - readableBuffer.remaining()) {
+            hasQueuedMemoryQuota.await();
+          }
+        } catch (InterruptedException e) {
+          throw Utils.toInterruptedIOException(e);
+        }
+      }
+
+      if (closing) {
+        sinkBuffer = null;
+      } else if (buffer.position() < buffer.limit()) {
+        sinkBuffer = remainingSlice; // Keep the remaining free space.
+      }
+
+      queue.add(readableBuffer);
+      queuedMemory += readableBuffer.remaining();
+      queuedMemoryTracker.queued(readableBuffer.remaining());
+      return true;
+    }
+
+    void close(boolean flowInterrupted) {
+      lock.lock();
+      try {
+        if (flowInterrupted) {
+          sinkBuffer = null;
+          queue.clear();
+        } else {
+          try {
+            flush(true);
+          } catch (InterruptedIOException e) {
+            throw new AssertionError(e); // Can't happen since we'll not be waiting.
+          }
+        }
+
+        // Wake up waiters if any.
+        queuedMemory = 0;
+        hasQueuedMemoryQuota.signalAll();
+      } finally {
+        lock.unlock();
+      }
+    }
+
+    @Nullable ByteBuffer poll() {
+      lock.lock();
+      try {
+        var buffer = queue.poll();
+        if (buffer != null) {
+          queuedMemory -= buffer.remaining();
+          queuedMemoryTracker.dequeued(buffer.remaining());
+          hasQueuedMemoryQuota.signalAll();
+        }
+        return buffer;
+      } finally {
+        lock.unlock();
+      }
+    }
+
+    boolean isComplete() {
+      // Here we utilize the fact that once the stream is closed (through the publisher), no more
+      // writes are expected. So we're complete if the queue is empty after detecting closure.
+      if (!isClosed.getAsBoolean()) {
+        return false;
+      }
+
+      lock.lock();
+      try {
+        return queue.isEmpty();
+      } finally {
+        lock.unlock();
       }
     }
   }

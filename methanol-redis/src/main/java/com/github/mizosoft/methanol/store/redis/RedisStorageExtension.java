@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,9 @@
 
 package com.github.mizosoft.methanol.store.redis;
 
+import static com.github.mizosoft.methanol.internal.Validate.castNonNull;
 import static com.github.mizosoft.methanol.internal.Validate.requireArgument;
+import static com.github.mizosoft.methanol.internal.Validate.requireState;
 import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.StorageExtension;
@@ -148,7 +150,9 @@ public interface RedisStorageExtension extends InternalStorageExtension {
 
     /** Creates a new {@code RedisStorageExtension}. */
     public RedisStorageExtension build() {
-      return factory.create(editorLockInactiveTtlSeconds, staleEntryInactiveTtlSeconds);
+      requireState(factory != null, "Redis setup not specified");
+      return castNonNull(factory)
+          .create(editorLockInactiveTtlSeconds, staleEntryInactiveTtlSeconds);
     }
 
     @FunctionalInterface

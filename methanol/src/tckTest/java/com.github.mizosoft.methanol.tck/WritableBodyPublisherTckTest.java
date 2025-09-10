@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,32 +23,59 @@
 package com.github.mizosoft.methanol.tck;
 
 import com.github.mizosoft.methanol.WritableBodyPublisher;
+import com.github.mizosoft.methanol.testing.ExecutorContext;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import com.github.mizosoft.methanol.testing.TestException;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.Flow.Publisher;
 import org.reactivestreams.tck.flow.FlowPublisherVerification;
+import org.testng.ITestResult;
 import org.testng.SkipException;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 @Test
 public class WritableBodyPublisherTckTest extends FlowPublisherVerification<ByteBuffer> {
+  private ExecutorContext executorContext;
+
   public WritableBodyPublisherTckTest() {
     super(TckUtils.newTestEnvironment());
+  }
+
+  @BeforeMethod
+  public void setMeUp(ITestResult tr) {
+    executorContext = new ExecutorContext(tr.getMethod().getMethodName());
+  }
+
+  @AfterMethod
+  public void tearMeDown() throws Exception {
+    executorContext.close();
   }
 
   @Override
   public Publisher<ByteBuffer> createFlowPublisher(long elements) {
     var publisher = WritableBodyPublisher.create(TckUtils.BUFFER_SIZE);
-    try (var channel = publisher.byteChannel()) {
-      for (int i = 0; i < elements; i++) {
-        var data = TckUtils.generateData();
-        int w = channel.write(data);
-        assert w == data.limit();
-      }
-    } catch (IOException e) {
-      throw new AssertionError(e);
-    }
+    executorContext
+        .createExecutor(ExecutorType.CACHED_POOL)
+        .execute(
+            () -> {
+              try (var channel = publisher.byteChannel()) {
+                for (int i = 0; i < elements; i++) {
+                  var data = TckUtils.generateData();
+                  int w = channel.write(data);
+                  assert w == data.limit();
+                }
+              } catch (ClosedChannelException ignored) {
+                // Ignore exceptional cases where failures in the flow close the exposed stream.
+              } catch (IOException e) {
+                // This will be reported when closing the ExecutorContext.
+                throw new UncheckedIOException(e);
+              }
+            });
     return publisher;
   }
 

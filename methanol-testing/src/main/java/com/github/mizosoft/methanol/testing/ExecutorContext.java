@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,6 +22,8 @@
 
 package com.github.mizosoft.methanol.testing;
 
+import static java.util.Objects.requireNonNull;
+
 import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorType;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
@@ -36,11 +38,18 @@ import java.util.concurrent.TimeoutException;
 public final class ExecutorContext implements AutoCloseable {
   private static final Logger logger = System.getLogger(ExecutorContext.class.getName());
 
+  private final String name;
   private final List<Executor> executors = new ArrayList<>();
   private final CloseableCopyOnWriteList<Throwable> uncaughtExceptions =
       new CloseableCopyOnWriteList<>();
 
-  public ExecutorContext() {}
+  public ExecutorContext() {
+    this("unnamed");
+  }
+
+  public ExecutorContext(String name) {
+    this.name = requireNonNull(name);
+  }
 
   public Executor createExecutor(ExecutorType type) {
     var executor =
@@ -88,7 +97,8 @@ public final class ExecutorContext implements AutoCloseable {
 
     exceptions.addAll(uncaughtExceptions.close());
     if (!exceptions.isEmpty()) {
-      throw new AggregateException("Multiple exceptions while closing executors", exceptions);
+      throw new AggregateException(
+          "Multiple exceptions while closing executors for (" + name + ")", exceptions);
     }
   }
 }

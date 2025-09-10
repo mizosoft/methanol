@@ -2185,7 +2185,7 @@ public final class DiskStore implements Store, TestableStore {
       }
     }
 
-    public void setClosed() {
+    void setClosed() {
       closed.set(true);
     }
 
@@ -2394,9 +2394,9 @@ public final class DiskStore implements Store, TestableStore {
     }
 
     @CanIgnoreReturnValue
-    private <T> T ensureSet(T property, String name) {
+    private <T> T ensureSet(@Nullable T property, String name) {
       requireState(property != null, "Expected %s to bet set", name);
-      return property;
+      return castNonNull(property);
     }
   }
 }
