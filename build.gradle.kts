@@ -6,6 +6,7 @@ plugins {
   id("conventions.aggregate-dokka")
   id("conventions.aggregate-testing")
   alias(libs.plugins.nexus.publish)
+  alias(libs.plugins.versions)
 }
 
 allprojects {
@@ -26,8 +27,8 @@ allprojects {
 nexusPublishing {
   repositories {
     sonatype {
-      username = project.findProperty("nexusUsername")?.toString()
-      password = project.findProperty("nexusPassword")?.toString()
+      nexusUrl = uri("https://ossrh-staging-api.central.sonatype.com/service/local/")
+      snapshotRepositoryUrl = uri("https://central.sonatype.com/repository/maven-snapshots/")
     }
   }
 }
