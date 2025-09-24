@@ -124,11 +124,24 @@ jobs:
 
       - name: Generate coverage report
         uses: ./.github/actions/gradle
+        with:
+          java-version: ${{ env.BASE_JAVA }}
+          gradle-args: jacocoAggregateReport
+
+      - name: Upload coverage report to artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-coverage-report
+          path: ./build/reports/jacoco/jacocoAggregateReport
+
+      - name: Upload coverage report to coveralls
+        uses: ./.github/actions/gradle
+        if: github.event_name == 'push' && github.event.repository.fork == false
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         with:
           java-version: ${{ env.BASE_JAVA }}
-          gradle-args: coverallsJacoco
+          gradle-args: jacocoAggregateReport
 
   snapshot-release:
     name: Release snapshot
