@@ -47,19 +47,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A builder of {@link HttpResponse} instances. */
 public final class ResponseBuilder<T> implements HeadersAccumulator<ResponseBuilder<T>> {
-  private static final @Nullable Class<?> jdkHttpResponseClass;
-
-  static {
-    Class<?> clazz;
-    try {
-      //noinspection Java9ReflectionClassVisibility
-      clazz = Class.forName("jdk.internal.net.http.HttpResponseImpl");
-    } catch (ClassNotFoundException e) {
-      clazz = null;
-    }
-    jdkHttpResponseClass = clazz;
-  }
-
   private static final int UNSET_STATUS_CODE = -1;
 
   private final HeadersBuilder headersBuilder = new HeadersBuilder();
@@ -335,7 +322,7 @@ public final class ResponseBuilder<T> implements HeadersAccumulator<ResponseBuil
 
   private static boolean isTrusted(HttpResponse<?> response) {
     return response instanceof HttpResponseImpl
-        || (jdkHttpResponseClass != null && jdkHttpResponseClass.isInstance(response));
+        || "java.net.http".equals(response.getClass().getModule().getName());
   }
 
   private static <T> @NonNull T ensureSet(@Nullable T property, String name) {
