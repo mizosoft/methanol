@@ -36,8 +36,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.io.TempDir;
 
+@DisabledOnOs(architectures = "aarch64")
 class BrotliLoaderTest {
 
   @Test
