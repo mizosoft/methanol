@@ -6,9 +6,29 @@ env:
   BASE_JAVA: 21
 
 jobs:
-  tests:
+  compile:
+    name: Compile
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        java: [ 11, 21, 24 ]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile on ${{ matrix.java }}
+        uses: ./.github/actions/gradle
+        with:
+          java-version: 21
+          gradle-args: build -x test -x tckTest -PenableErrorprone
+
+  test:
     name: Test on ${{ matrix.os }} with Java ${{ matrix.java }}
     runs-on: ${{ matrix.os }}
+    needs: compile
+    permissions:
+      contents: read
     strategy:
       matrix:
         os:
@@ -33,12 +53,6 @@ jobs:
             ./install-redis-ubuntu.sh
           fi
 
-      - name: Compile
-        uses: ./.github/actions/gradle
-        with:
-          java-version: 21
-          gradle-args: compileJava -PenableErrorprone
-
       - name: Run tests
         uses: ./.github/actions/gradle
         with:
@@ -56,9 +70,12 @@ jobs:
             **/build/test-results/
             **/build/**/*.exec
 
-  native-tests:
+  native-test:
     name: Run native tests
     runs-on: ubuntu-latest
+    needs: compile
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -93,7 +110,9 @@ jobs:
 
   coverage:
     name: Upload coverage report
-    needs: tests
+    needs: test
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -105,18 +124,33 @@ jobs:
 
       - name: Generate coverage report
         uses: ./.github/actions/gradle
+        with:
+          java-version: ${{ env.BASE_JAVA }}
+          gradle-args: jacocoAggregateReport
+
+      - name: Upload coverage report to artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-coverage-report
+          path: ./build/reports/jacoco/jacocoAggregateReport
+
+      - name: Upload coverage report to coveralls
+        uses: ./.github/actions/gradle
+        if: github.event_name == 'push' && github.event.repository.fork == false
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         with:
           java-version: ${{ env.BASE_JAVA }}
-          gradle-args: coverallsJacoco
+          gradle-args: jacocoAggregateReport
 
   snapshot-release:
     name: Release snapshot
     if: |
       github.event_name == 'push' 
         && github.ref_name == github.event.repository.default_branch
-    needs: tests
+    needs: test
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

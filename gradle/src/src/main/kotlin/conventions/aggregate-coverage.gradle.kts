@@ -18,7 +18,7 @@ val jacocoAggregateReport by tasks.registering(JacocoReport::class) {
 }
 
 tasks.named("coverallsJacoco") {
-  dependsOn(jacocoAggregateReport)
+  mustRunAfter(jacocoAggregateReport)
   onlyIf { System.getenv().containsKey("GITHUB_ACTIONS") }
   inputs.files(jacocoAggregateReport.map { it.outputs.files })
 }

@@ -2,7 +2,7 @@ name: Publish site
 
 on:
   push:
-    branches: [ master, doc-updates ]
+    branches: [ master ]
 
 env:
   BASE_JAVA: 21 # Javadoc generation needs Java >= 12.
@@ -10,6 +10,7 @@ env:
 jobs:
   publish-site:
     name: Publish site
+    if: github.event.repository.fork == false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
