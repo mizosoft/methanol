@@ -57,9 +57,7 @@ jobs:
         uses: ./.github/actions/gradle
         with:
           java-version: ${{ matrix.java }}
-
-          # Brotli is not currently supported on macOS so related tests are excluded there.
-          gradle-args: check ${{ (startsWith(matrix.os, 'macos') && '-x :methanol-brotli:test') || '' }}
+          gradle-args: check
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
