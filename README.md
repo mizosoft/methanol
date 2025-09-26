@@ -14,6 +14,12 @@ is given to object mapping, so integration with libraries like Jackson or Gson b
 
 There's also a Kotlin DSL!
 
+## Prerequisites (at runtime)
+
+- Java 11 or higher
+
+Build time prerequisites in [CONTRIBUTING](CONTRIBUTING.md).
+
 ## Installation
 
 ### Gradle

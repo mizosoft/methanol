@@ -13,7 +13,7 @@ You are more than welcome to:
 
 ## Prerequisites
 
-It is recommended to set the `JAVA_HOME` environment variable to a JDK 11 (or later) directory in
+It is recommended to set the `JAVA_HOME` environment variable to a JDK 17 (or later) directory in
 order to properly work with Gradle.
 
 ## Building
