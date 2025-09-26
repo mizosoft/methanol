@@ -681,6 +681,98 @@ public class Methanol extends HttpClient {
     }
   }
 
+  /**
+   * An object that creates a strategy for optionally retrying a given request based on the
+   * resulting response or exception.
+   */
+  public interface Retryer {
+
+    /** Creates a {@link Retry<T>} for the given exchange. */
+    <T> Retry<T> retryOf(HttpRequest request, Chain<T> chain);
+
+    /** A strategy for retrying a given request based on the resulting response or exception. */
+    interface Retry<T> {
+
+      /**
+       * Optionally modifies the initial request.
+       *
+       * @implSpec
+       */
+      default HttpRequest begin(HttpRequest request) {
+        return request;
+      }
+
+      /**
+       * Returns the next request to be sent, or {@code Optional.empty()} if the given response or
+       * exception is to be returned or thrown as-is.
+       */
+      Optional<HttpRequest> next(@Nullable HttpResponse<T> response, @Nullable Throwable exception);
+    }
+
+    /** Converts this {@code Retryer} into an {@code Interceptor}. */
+    default Interceptor toInterceptor() {
+      return new Interceptor() {
+        @Override
+        public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
+            throws IOException, InterruptedException {
+          var retry = retryOf(request, chain);
+          var currentRequest = retry.begin(request);
+          while (true) {
+            HttpResponse<T> response = null;
+            Throwable exception = null;
+            try {
+              response = chain.forward(currentRequest);
+            } catch (Throwable e) {
+              exception = e;
+            }
+
+            var nextRequest = retry.next(response, exception);
+            if (nextRequest.isPresent()) {
+              currentRequest = nextRequest.get(); // Retry.
+            } else if (response != null) {
+              return response;
+            } else if (exception instanceof IOException) {
+              throw (IOException) exception;
+            } else if (exception instanceof InterruptedException) {
+              throw (InterruptedException) exception;
+            } else if (exception instanceof RuntimeException) {
+              throw (RuntimeException) exception;
+            } else {
+              throw new IOException(exception);
+            }
+          }
+        }
+
+        @Override
+        public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
+            HttpRequest request, Chain<T> chain) {
+          var retry = retryOf(request, chain);
+          return chain
+              .forwardAsync(retry.begin(request))
+              .handle((response, exception) -> continueRetry(chain, retry, response, exception))
+              .thenCompose(Function.identity());
+        }
+      };
+    }
+
+    private <T> CompletableFuture<HttpResponse<T>> continueRetry(
+        Chain<T> chain,
+        Retry<T> retry,
+        @Nullable HttpResponse<T> response,
+        @Nullable Throwable exception) {
+      assert response != null || exception != null;
+
+      return retry
+          .next(response, exception)
+          .map(chain::forwardAsync)
+          .orElseGet(
+              () ->
+                  response != null
+                      ? CompletableFuture.completedFuture(response)
+                      : CompletableFuture.failedFuture(exception));
+    }
+  }
+
   /** A base {@code Methanol} builder allowing to set the non-standard properties. */
   public abstract static class BaseBuilder<B extends BaseBuilder<B>> {
     final HeadersBuilder defaultHeadersBuilder = new HeadersBuilder();
