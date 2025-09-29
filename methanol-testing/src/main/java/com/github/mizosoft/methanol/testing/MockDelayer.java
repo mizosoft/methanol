@@ -32,7 +32,6 @@ import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
 import org.checkerframework.checker.nullness.qual.Nullable;
@@ -61,7 +60,7 @@ public final class MockDelayer implements Delayer {
   }
 
   @Override
-  public Future<Void> delay(Runnable task, Duration delay, Executor executor) {
+  public CompletableFuture<Void> delay(Runnable task, Duration delay, Executor executor) {
     var now = clock.peekInstant(); // Do not advance clock if auto-advancing.
     var future = new DelayedFuture(task, now.plus(delay), executor, clock);
     synchronized (taskQueue) {
