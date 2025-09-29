@@ -30,7 +30,6 @@ import java.time.Duration;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 
 class ScheduledExecutorServiceDelayer implements Delayer {
@@ -42,7 +41,7 @@ class ScheduledExecutorServiceDelayer implements Delayer {
 
   @Override
   @SuppressWarnings("FutureReturnValueIgnored")
-  public Future<Void> delay(Runnable task, Duration delay, Executor executor) {
+  public CompletableFuture<Void> delay(Runnable task, Duration delay, Executor executor) {
     if (delay.isZero()) {
       return CompletableFuture.runAsync(task, executor);
     }

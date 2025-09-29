@@ -23,15 +23,15 @@
 package com.github.mizosoft.methanol.internal.concurrent;
 
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 
 /** Delays the execution of a given task. */
 public interface Delayer {
 
   /** Arranges for the task to be submitted to the given executor after the delay is evaluated. */
-  Future<Void> delay(Runnable task, Duration delay, Executor executor);
+  CompletableFuture<Void> delay(Runnable task, Duration delay, Executor executor);
 
   /** A Delayer that uses a library-wide scheduler. */
   static Delayer defaultDelayer() {
