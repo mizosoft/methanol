@@ -93,7 +93,7 @@ class HttpResponsePublisherTest {
     bodySubscriber.onSubscribe(FlowSupport.NOOP_SUBSCRIPTION);
     var body = bodySubscriber.getBody().toCompletableFuture().getNow(null);
     assertThat(body).isNotNull(); // InputStream body completes before subscriber completion.
-    call.future().complete(call.okResponse(new ImmutableResponseInfo(), body));
+    call.future().complete(call.responseOf(new ImmutableResponseInfo(), body));
 
     // As push promises can be received anytime amid receiving the main response body, downstream
     // waits for body's completion and not just for the response completion (the former happens
@@ -333,7 +333,7 @@ class HttpResponsePublisherTest {
     void complete(ByteBuffer responseBody) {
       future.complete(
           new Call<>(request, bodyHandler, null)
-              .okHandledResponse(new ImmutableResponseInfo(), responseBody));
+              .handledResponseOf(new ImmutableResponseInfo(), responseBody));
     }
 
     void completeExceptionally(Throwable exception) {
