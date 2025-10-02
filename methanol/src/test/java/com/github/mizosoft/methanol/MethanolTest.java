@@ -266,7 +266,7 @@ class MethanolTest {
         MoreBodyPublishers.ofMediaType(
             BodyPublishers.ofString("something"), MediaType.of("text", "plain"));
     client.send(POST("https://example.com", mimeBody), BodyHandlers.discarding());
-    verifyThat(backend.request).containsHeader("Content-Type", "text/plain");
+    verifyThat(backend.request).containsHeaderExactly("Content-Type", "text/plain");
   }
 
   @Test

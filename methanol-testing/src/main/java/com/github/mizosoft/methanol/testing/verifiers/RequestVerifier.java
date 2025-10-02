@@ -126,6 +126,12 @@ public final class RequestVerifier {
 
   @CanIgnoreReturnValue
   public RequestVerifier containsHeader(String name, String value) {
+    assertThat(request.headers().allValues(name)).contains(value);
+    return this;
+  }
+
+  @CanIgnoreReturnValue
+  public RequestVerifier containsHeaderExactly(String name, String value) {
     assertThat(request.headers().allValues(name)).singleElement().isEqualTo(value);
     return this;
   }
