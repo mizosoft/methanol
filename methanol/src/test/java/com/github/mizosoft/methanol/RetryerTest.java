@@ -22,6 +22,7 @@
 
 package com.github.mizosoft.methanol;
 
+import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.testing.RecordingHttpClient;
@@ -29,6 +30,7 @@ import com.github.mizosoft.methanol.testing.TestException;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -406,5 +408,84 @@ class RetryerTest {
         .failsWithin(Duration.ZERO)
         .withThrowableOfType(ExecutionException.class)
         .withCauseExactlyInstanceOf(TestException.class);
+  }
+
+  @Test
+  void retryWithRequestModification() {
+    var client =
+        clientBuilder
+            .interceptor(
+                Methanol.Retryer.newBuilder()
+                    .always(
+                        retry ->
+                            retry
+                                .atMost(6)
+                                .onStatus(
+                                    HttpStatus::isServerError,
+                                    context ->
+                                        MutableRequest.copyOf(context.request())
+                                            .header("X-Retry-Type", "onStatusPredicate"))
+                                .onStatus(
+                                    Set.of(400),
+                                    context ->
+                                        MutableRequest.copyOf(context.request())
+                                            .header("X-Retry-Type", "onStatus"))
+                                .onException(
+                                    Set.of(TestException.class),
+                                    context ->
+                                        MutableRequest.copyOf(context.request())
+                                            .header("X-Retry-Type", "onException"))
+                                .onException(
+                                    e -> e instanceof IOException,
+                                    context ->
+                                        MutableRequest.copyOf(context.request())
+                                            .header("X-Retry-Type", "onExceptionPredicate"))
+                                .onResponse(
+                                    r -> r.headers().map().containsKey("X-Retry"),
+                                    context ->
+                                        MutableRequest.copyOf(context.request())
+                                            .header("X-Retry-Type", "onResponse")))
+                    .build()
+                    .toInterceptor())
+            .build();
+
+    var responseFuture =
+        client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+
+    recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
+    var call = recordingClient.awaitCall();
+    verifyThat(call.request()).containsHeader("X-Retry-Type", "onStatusPredicate");
+
+    call.complete(builder -> builder.statusCode(400));
+    call = recordingClient.awaitCall();
+    verifyThat(call.request()).containsHeader("X-Retry-Type", "onStatus");
+
+    call.complete(builder -> builder.statusCode(400));
+    call = recordingClient.awaitCall();
+    verifyThat(call.request()).containsHeader("X-Retry-Type", "onStatus");
+
+    call.completeExceptionally(new TestException());
+    call = recordingClient.awaitCall();
+    verifyThat(call.request()).containsHeader("X-Retry-Type", "onException");
+
+    call.completeExceptionally(new IOException());
+    call = recordingClient.awaitCall();
+    verifyThat(call.request()).containsHeader("X-Retry-Type", "onExceptionPredicate");
+
+    call.complete(builder -> builder.header("X-Retry", "true"));
+    call = recordingClient.awaitCall();
+    verifyThat(call.request()).containsHeader("X-Retry-Type", "onResponse");
+
+    call.complete(builder -> builder.statusCode(200));
+
+    assertThat(responseFuture)
+        .isCompleted()
+        .succeedsWithin(Duration.ZERO)
+        .matches(HttpStatus::isSuccessful);
+  }
+
+  @Test
+  void t() {
+
   }
 }
