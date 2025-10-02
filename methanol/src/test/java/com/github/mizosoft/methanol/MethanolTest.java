@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -557,7 +557,7 @@ class MethanolTest {
                       .whenComplete(
                           (result, ex) -> {
                             if (result != null) {
-                              call.complete((HttpResponse) call.okResponse(responseInfo, result));
+                              call.complete((HttpResponse) call.responseOf(responseInfo, result));
                             }
                           });
                 });
@@ -594,7 +594,7 @@ class MethanolTest {
                       .whenComplete(
                           (result, ex) -> {
                             if (result != null) {
-                              call.complete((HttpResponse) call.okResponse(responseInfo, result));
+                              call.complete((HttpResponse) call.responseOf(responseInfo, result));
                             }
                           });
                 });
@@ -638,7 +638,7 @@ class MethanolTest {
                       .whenComplete(
                           (result, ex) -> {
                             if (result != null) {
-                              call.complete((HttpResponse) call.okResponse(responseInfo, result));
+                              call.complete((HttpResponse) call.responseOf(responseInfo, result));
                             }
                           });
                 });

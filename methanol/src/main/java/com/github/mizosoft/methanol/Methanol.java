@@ -807,7 +807,7 @@ public class Methanol extends HttpClient {
       class Builder {
         private static final int DEFAULT_MAX_ATTEMPTS = 5;
 
-        private int maxAttempts = DEFAULT_MAX_ATTEMPTS;
+        private int maxRetries = DEFAULT_MAX_ATTEMPTS;
         private Function<HttpRequest, HttpRequest> beginWith = Function.identity();
         private final List<RetryCondition<Throwable>> exceptionConditions = new ArrayList<>();
         private final List<RetryCondition<Integer>> statusConditions = new ArrayList<>();
@@ -823,9 +823,9 @@ public class Methanol extends HttpClient {
         }
 
         @CanIgnoreReturnValue
-        public Builder maxAttempts(int maxAttempts) {
-          requireArgument(maxAttempts > 0, "maxAttempts must be positive");
-          this.maxAttempts = maxAttempts;
+        public Builder atMost(int maxRetries) {
+          requireArgument(maxRetries > 0, "maxAttempts must be positive");
+          this.maxRetries = maxRetries;
           return this;
         }
 
@@ -838,15 +838,16 @@ public class Methanol extends HttpClient {
         @SafeVarargs
         @CanIgnoreReturnValue
         public final Builder onException(Class<? extends Throwable>... exceptionTypes) {
-          return onException(Set.of(exceptionTypes), Function.identity());
+          return onException(Set.of(exceptionTypes), Context::request);
         }
 
         @CanIgnoreReturnValue
         public final Builder onException(
             Set<Class<? extends Throwable>> exceptionTypes,
-            Function<HttpRequest, HttpRequest> requestModifier) {
+            Function<Context, HttpRequest> requestModifier) {
           var exceptionTypesCopy = Set.copyOf(exceptionTypes);
-          return onException(t -> exceptionTypesCopy.stream().anyMatch(c -> c.isInstance(t)));
+          return onException(
+              t -> exceptionTypesCopy.stream().anyMatch(c -> c.isInstance(t)), requestModifier);
         }
 
         @CanIgnoreReturnValue
@@ -901,7 +902,7 @@ public class Methanol extends HttpClient {
 
         public Retry build() {
           return new RetryImpl(
-              maxAttempts,
+              maxRetries,
               beginWith,
               exceptionConditions,
               statusConditions,
@@ -1863,7 +1864,10 @@ public class Methanol extends HttpClient {
                               retry
                                   .next(
                                       Retryer.Retry.Context.of(
-                                          attempt.request(), response, exception, retryCount))
+                                          attempt.request(),
+                                          response,
+                                          Utils.getDeepCompletionCause(exception),
+                                          retryCount))
                                   .map(
                                       nextAttempt ->
                                           continueRetry(retry, nextAttempt, chain, retryCount + 1))

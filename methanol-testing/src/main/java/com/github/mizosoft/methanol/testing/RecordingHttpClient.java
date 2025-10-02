@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -211,7 +211,7 @@ public class RecordingHttpClient extends HttpClient {
     }
 
     public void complete(T body) {
-      complete(okResponse(new ImmutableResponseInfo(), body));
+      complete(responseOf(new ImmutableResponseInfo(), body));
     }
 
     public void complete() {
@@ -219,11 +219,11 @@ public class RecordingHttpClient extends HttpClient {
     }
 
     public void complete(ByteBuffer responseBody) {
-      complete(okHandledResponse(new ImmutableResponseInfo(), responseBody));
+      complete(handledResponseOf(new ImmutableResponseInfo(), responseBody));
     }
 
     public void complete(ResponseInfo responseInfo, ByteBuffer responseBody) {
-      complete(okHandledResponse(responseInfo, responseBody));
+      complete(handledResponseOf(responseInfo, responseBody));
     }
 
     public void complete(HttpResponse<T> response) {
@@ -234,11 +234,11 @@ public class RecordingHttpClient extends HttpClient {
       assertThat(responseFuture.completeExceptionally(exception)).isTrue();
     }
 
-    public HttpResponse<T> okHandledResponse(ResponseInfo responseInfo, ByteBuffer responseBody) {
-      return okResponse(responseInfo, decodeBody(responseInfo, responseBody));
+    public HttpResponse<T> handledResponseOf(ResponseInfo responseInfo, ByteBuffer responseBody) {
+      return responseOf(responseInfo, decodeBody(responseInfo, responseBody));
     }
 
-    public <U> HttpResponse<U> okResponse(ResponseInfo responseInfo, U body) {
+    public <U> HttpResponse<U> responseOf(ResponseInfo responseInfo, U body) {
       return ResponseBuilder.<U>create()
           .statusCode(responseInfo.statusCode())
           .headers(responseInfo.headers())
@@ -247,6 +247,30 @@ public class RecordingHttpClient extends HttpClient {
           .uri(request.uri())
           .body(body)
           .build();
+    }
+
+    public void complete(Consumer<ResponseBuilder<T>> mutator) {
+      complete(mutator, TestUtils.EMPTY_BUFFER);
+    }
+
+    public void complete(Consumer<ResponseBuilder<T>> mutator, ByteBuffer body) {
+      var builder =
+          ResponseBuilder.<T>create()
+              .request(request)
+              .uri(request.uri())
+              .version(request.version().orElse(Version.HTTP_1_1));
+      mutator.accept(builder);
+      var partialResponse = builder.build();
+      complete(
+          builder
+              .body(
+                  decodeBody(
+                      new ImmutableResponseInfo(
+                          partialResponse.statusCode(),
+                          partialResponse.headers(),
+                          partialResponse.version()),
+                      body))
+              .build());
     }
 
     private T decodeBody(ResponseInfo responseInfo, ByteBuffer responseBody) {
