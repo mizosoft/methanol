@@ -741,8 +741,8 @@ public class Methanol extends HttpClient {
        *
        * @implSpec the default implementation returns the given request as-is
        */
-      default RetryAttempt begin(HttpRequest request) {
-        return RetryAttempt.of(request, Duration.ZERO);
+      default HttpRequest begin(HttpRequest request) {
+        return request;
       }
 
       /**
@@ -809,9 +809,7 @@ public class Methanol extends HttpClient {
 
         private int maxRetries = DEFAULT_MAX_ATTEMPTS;
         private Function<HttpRequest, HttpRequest> beginWith = Function.identity();
-        private final List<RetryCondition<Throwable>> exceptionConditions = new ArrayList<>();
-        private final List<RetryCondition<Integer>> statusConditions = new ArrayList<>();
-        private final List<RetryCondition<HttpResponse<?>>> responseCondition = new ArrayList<>();
+        private final List<RetryCondition> conditions = new ArrayList<>();
         private BackoffStrategy backoffStrategy = BackoffStrategy.none();
 
         Builder() {}
@@ -859,7 +857,9 @@ public class Methanol extends HttpClient {
         public Builder onException(
             Predicate<Throwable> exceptionPredicate,
             Function<Context, HttpRequest> requestModifier) {
-          exceptionConditions.add(new RetryCondition<>(exceptionPredicate, requestModifier));
+          conditions.add(
+              new RetryCondition(
+                  (__, e) -> e != null && exceptionPredicate.test(e), requestModifier));
           return this;
         }
 
@@ -883,7 +883,9 @@ public class Methanol extends HttpClient {
         @CanIgnoreReturnValue
         public Builder onStatus(
             Predicate<Integer> statusPredicate, Function<Context, HttpRequest> requestModifier) {
-          statusConditions.add(new RetryCondition<>(statusPredicate, requestModifier));
+          conditions.add(
+              new RetryCondition(
+                  (r, __) -> r != null && statusPredicate.test(r.statusCode()), requestModifier));
           return this;
         }
 
@@ -896,27 +898,24 @@ public class Methanol extends HttpClient {
         public Builder onResponse(
             Predicate<HttpResponse<?>> responsePredicate,
             Function<Context, HttpRequest> requestModifier) {
-          responseCondition.add(new RetryCondition<>(responsePredicate, requestModifier));
+          conditions.add(
+              new RetryCondition(
+                  (r, __) -> r != null && responsePredicate.test(r), requestModifier));
           return this;
         }
 
         public Retry build() {
-          return new RetryImpl(
-              maxRetries,
-              beginWith,
-              exceptionConditions,
-              statusConditions,
-              responseCondition,
-              backoffStrategy);
+          return new RetryImpl(maxRetries, beginWith, conditions, backoffStrategy);
         }
 
-        private static final class RetryCondition<T> {
-          final Predicate<T> exceptionPredicate;
+        private static final class RetryCondition {
+          final BiPredicate<HttpResponse<?>, Throwable> predicate;
           final Function<Context, HttpRequest> requestModifier;
 
           RetryCondition(
-              Predicate<T> exceptionPredicate, Function<Context, HttpRequest> requestModifier) {
-            this.exceptionPredicate = requireNonNull(exceptionPredicate);
+              BiPredicate<HttpResponse<?>, Throwable> predicate,
+              Function<Context, HttpRequest> requestModifier) {
+            this.predicate = requireNonNull(predicate);
             this.requestModifier = requireNonNull(requestModifier);
           }
         }
@@ -924,43 +923,29 @@ public class Methanol extends HttpClient {
         private static final class RetryImpl implements Retry {
           private final int maxRetries;
           private final Function<HttpRequest, HttpRequest> beginWith;
-          private final List<RetryCondition<Throwable>> exceptionConditions;
-          private final List<RetryCondition<Integer>> statusConditions;
-          private final List<RetryCondition<HttpResponse<?>>> responseConditions;
+          private final List<RetryCondition> conditions;
           private final BackoffStrategy backoffStrategy;
 
           RetryImpl(
               int maxRetries,
               Function<HttpRequest, HttpRequest> beginWith,
-              List<RetryCondition<Throwable>> exceptionCondition,
-              List<RetryCondition<Integer>> statusCondition,
-              List<RetryCondition<HttpResponse<?>>> responseCondition,
+              List<RetryCondition> conditions,
               BackoffStrategy backoffStrategy) {
             this.maxRetries = maxRetries;
             this.beginWith = beginWith;
-            this.exceptionConditions = List.copyOf(exceptionCondition);
-            this.statusConditions = List.copyOf(statusCondition);
-            this.responseConditions = List.copyOf(responseCondition);
+            this.conditions = List.copyOf(conditions);
             this.backoffStrategy = backoffStrategy;
           }
 
           @Override
-          public RetryAttempt begin(HttpRequest request) {
-            return RetryAttempt.of(beginWith.apply(request), Duration.ZERO);
+          public HttpRequest begin(HttpRequest request) {
+            return beginWith.apply(request);
           }
 
           @Override
           public Optional<RetryAttempt> next(Context context) {
             return context.retryCount() < maxRetries
-                ? context
-                    .exception()
-                    .flatMap(e -> next(context, exceptionConditions, e))
-                    .or(
-                        () ->
-                            context
-                                .response()
-                                .flatMap(r -> next(context, statusConditions, r.statusCode())))
-                    .or(() -> context.response().flatMap(r -> next(context, responseConditions, r)))
+                ? eval(context)
                     .map(
                         nextRequest ->
                             RetryAttempt.of(
@@ -968,14 +953,10 @@ public class Methanol extends HttpClient {
                 : Optional.empty();
           }
 
-          private <T> Optional<HttpRequest> next(
-              Context context, List<RetryCondition<T>> conditions, @Nullable T value) {
-            if (value == null) {
-              return Optional.empty();
-            }
-
+          private Optional<HttpRequest> eval(Context context) {
             for (var condition : conditions) {
-              if (condition.exceptionPredicate.test(value)) {
+              if (condition.predicate.test(
+                  context.response().orElse(null), context.exception().orElse(null))) {
                 return Optional.of(condition.requestModifier.apply(context));
               }
             }
@@ -1003,13 +984,14 @@ public class Methanol extends HttpClient {
 
     /** A builder of {@link Retryer} objects. */
     final class Builder {
-      private final List<Entry> entries = new ArrayList<>();
+      private final List<SelectionCondition> conditions = new ArrayList<>();
 
-      private static final class Entry {
+      private static final class SelectionCondition {
         final BiPredicate<HttpRequest, Chain<?>> selector;
         final Consumer<Retry.Builder> spec;
 
-        Entry(BiPredicate<HttpRequest, Chain<?>> selector, Consumer<Retry.Builder> spec) {
+        SelectionCondition(
+            BiPredicate<HttpRequest, Chain<?>> selector, Consumer<Retry.Builder> spec) {
           this.selector = requireNonNull(selector);
           this.spec = requireNonNull(spec);
         }
@@ -1018,35 +1000,35 @@ public class Methanol extends HttpClient {
       Builder() {}
 
       public Builder always(Consumer<Retry.Builder> retryBuilder) {
-        entries.add(new Entry((__, ___) -> true, retryBuilder));
+        conditions.add(new SelectionCondition((__, ___) -> true, retryBuilder));
         return this;
       }
 
       public Builder when(Predicate<HttpRequest> selector, Consumer<Retry.Builder> spec) {
-        entries.add(new Entry((req, __) -> selector.test(req), spec));
+        conditions.add(new SelectionCondition((req, __) -> selector.test(req), spec));
         return this;
       }
 
       public Builder when(
           BiPredicate<HttpRequest, Chain<?>> selector, Consumer<Retry.Builder> spec) {
-        entries.add(new Entry(selector, spec));
+        conditions.add(new SelectionCondition(selector, spec));
         return this;
       }
 
       public Retryer build() {
-        return new PredicateRetryer(entries);
+        return new SelectiveRetryer(conditions);
       }
 
-      private static final class PredicateRetryer implements Retryer {
-        private final List<Entry> entries;
+      private static final class SelectiveRetryer implements Retryer {
+        private final List<SelectionCondition> condition;
 
-        PredicateRetryer(List<Entry> entries) {
-          this.entries = List.copyOf(entries);
+        SelectiveRetryer(List<SelectionCondition> condition) {
+          this.condition = List.copyOf(condition);
         }
 
         @Override
         public Optional<Retry> retryOf(HttpRequest request, Chain<?> chain) {
-          for (var entry : entries) {
+          for (var entry : condition) {
             if (entry.selector.test(request, chain)) {
               var builder = new Retry.Builder();
               entry.spec.accept(builder);
@@ -1806,7 +1788,7 @@ public class Methanol extends HttpClient {
       }
 
       var retry = maybeRetry.get();
-      var attempt = retry.begin(request);
+      var attempt = Retryer.RetryAttempt.of(retry.begin(request), Duration.ZERO);
       int retryCount = 0;
       while (true) {
         if (!attempt.delay().isZero()) {
@@ -1848,7 +1830,8 @@ public class Methanol extends HttpClient {
       }
 
       var retry = maybeRetry.get();
-      return continueRetry(retry, retry.begin(request), chain, 0);
+      return continueRetry(
+          retry, Retryer.RetryAttempt.of(retry.begin(request), Duration.ZERO), chain, 0);
     }
 
     private <T> CompletableFuture<HttpResponse<T>> continueRetry(

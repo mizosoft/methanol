@@ -30,8 +30,10 @@ import com.github.mizosoft.methanol.testing.TestException;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -485,7 +487,97 @@ class RetryerTest {
   }
 
   @Test
-  void t() {
+  void retryWithRequestSelector() {
+    var client =
+        clientBuilder
+            .interceptor(
+                Methanol.Retryer.newBuilder()
+                    .when(
+                        request -> request.headers().map().containsKey("X-Retry"),
+                        retry -> retry.atMost(2).onException(TestException.class))
+                    .build()
+                    .toInterceptor())
+            .build();
 
+    // This request is not retried.
+    var responseFuture =
+        client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+    recordingClient.awaitCall().completeExceptionally(new TestException());
+    assertThat(responseFuture)
+        .isCompletedExceptionally()
+        .failsWithin(Duration.ZERO)
+        .withThrowableOfType(ExecutionException.class)
+        .withCauseExactlyInstanceOf(TestException.class);
+
+    // This request is not retried.
+    var secondResponseFuture =
+        client.sendAsync(
+            MutableRequest.GET("https://example.com").header("X-Retry", "true"),
+            BodyHandlers.discarding());
+    recordingClient.awaitCall().completeExceptionally(new TestException());
+    recordingClient.awaitCall().completeExceptionally(new TestException());
+    recordingClient.awaitCall().completeExceptionally(new TestException());
+    assertThat(secondResponseFuture)
+        .isCompletedExceptionally()
+        .failsWithin(Duration.ZERO)
+        .withThrowableOfType(ExecutionException.class)
+        .withCauseExactlyInstanceOf(TestException.class);
+  }
+
+  @Test
+  void retryConditionOrder() {
+    final class Entry {
+      final Consumer<Methanol.Retryer.Retry.Builder> spec;
+      final String expectedType;
+
+      Entry(Consumer<Methanol.Retryer.Retry.Builder> spec, String expectedType) {
+        this.spec = spec;
+        this.expectedType = expectedType;
+      }
+    }
+
+    for (var entry :
+        List.of(
+            new Entry(
+                retry ->
+                    retry
+                        .atMost(1)
+                        .onStatus(
+                            Set.of(500),
+                            context ->
+                                MutableRequest.copyOf(context.request())
+                                    .header("X-Retry-Type", "onStatus"))
+                        .onResponse(
+                            r -> r.statusCode() == 500,
+                            context ->
+                                MutableRequest.copyOf(context.request())
+                                    .header("X-Retry-Type", "onResponse")),
+                "onStatus"),
+            new Entry(
+                retry ->
+                    retry
+                        .atMost(1)
+                        .onResponse(
+                            r -> r.statusCode() == 500,
+                            context ->
+                                MutableRequest.copyOf(context.request())
+                                    .header("X-Retry-Type", "onResponse"))
+                        .onStatus(
+                            Set.of(500),
+                            context ->
+                                MutableRequest.copyOf(context.request())
+                                    .header("X-Retry-Type", "onStatus")),
+                "onResponse"))) {
+      clientBuilder = Methanol.newBuilder(recordingClient);
+      var client =
+          clientBuilder
+              .interceptor(Methanol.Retryer.newBuilder().always(entry.spec).build().toInterceptor())
+              .build();
+      client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+
+      recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
+      var call = recordingClient.awaitCall();
+      verifyThat(call.request()).containsHeader("X-Retry-Type", entry.expectedType);
+    }
   }
 }
