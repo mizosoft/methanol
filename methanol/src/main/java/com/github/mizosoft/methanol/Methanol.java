@@ -684,25 +684,96 @@ public class Methanol extends HttpClient {
     }
   }
 
-  /**
-   * An object that creates a strategy for optionally retrying a given request based on the
-   * resulting response or exception.
-   */
-  public interface Retryer {
+  /** A strategy for retrying a request based on the resulting response or exception. */
+  @FunctionalInterface
+  public interface Retrier {
 
     /**
-     * Creates a {@link Retry} for the given request call, or {@code Optional.empty()} if this call
-     * is not to be retried.
+     * Optionally modifies the initial request.
+     *
+     * @implSpec the default implementation returns the given request as-is
      */
-    Optional<Retry> retryOf(HttpRequest request, Chain<?> chain);
-
-    /** Converts this {@code Retryer} into an {@code Interceptor}. */
-    default Interceptor toInterceptor() {
-      return new RetryingInterceptor(this, Delayer.defaultDelayer());
+    default HttpRequest begin(HttpRequest request) {
+      return request;
     }
 
-    static Builder newBuilder() {
-      return new Builder();
+    /**
+     * Returns the next request to be sent, or {@code Optional.empty()} if the given response or
+     * exception is to be returned or thrown as-is.
+     */
+    Optional<RetryAttempt> next(Context context);
+
+    /** Returns an interceptor that retries request based on this {@code Retrier}. */
+    default Interceptor toInterceptor() {
+      return toInterceptor((__, ___) -> true);
+    }
+
+    /**
+     * Returns an interceptor that retries the requests selected by the given predicate based on
+     * this {@code Retrier}.
+     */
+    default Interceptor toInterceptor(Predicate<HttpRequest> requestSelector) {
+      return toInterceptor((request, __) -> requestSelector.test(request));
+    }
+
+    /**
+     * Returns an interceptor that retries the requests selected by the given predicate based on
+     * this {@code Retrier}.
+     */
+    default Interceptor toInterceptor(BiPredicate<HttpRequest, Chain<?>> requestSelector) {
+      return new RetryingInterceptor(requestSelector, this, Delayer.defaultDelayer());
+    }
+
+    /** Context for the retry. */
+    interface Context {
+      /**
+       * Returns the last-sent request. Note that this might be different from the {@link
+       * HttpResponse#request() request} of this context's response (e.g. redirects).
+       */
+      HttpRequest request();
+
+      /** Returns the resulting response. */
+      Optional<HttpResponse<?>> response();
+
+      /** Returns the resulting exception. */
+      Optional<Throwable> exception();
+
+      /** Returns the number of times the request has been retried. */
+      int retryCount();
+
+      /**
+       * Creates a new retry context based on the given state.
+       *
+       * @throws IllegalArgumentException if it is not that case that exactly one of {@code
+       *     response} or {@code exception} is non-null, of if {@code retryCount} is negative
+       */
+      static Context of(
+          HttpRequest request,
+          @Nullable HttpResponse<?> response,
+          @Nullable Throwable exception,
+          int retryCount) {
+        return new Context() {
+          @Override
+          public HttpRequest request() {
+            return request;
+          }
+
+          @Override
+          public Optional<HttpResponse<?>> response() {
+            return Optional.ofNullable(response);
+          }
+
+          @Override
+          public Optional<Throwable> exception() {
+            return Optional.ofNullable(exception);
+          }
+
+          @Override
+          public int retryCount() {
+            return retryCount;
+          }
+        };
+      }
     }
 
     /** An attempt for retrying a request. */
@@ -732,314 +803,177 @@ public class Methanol extends HttpClient {
       }
     }
 
-    /**
-     * A strategy for retrying a request based on the given response or exception. This interface
-     * should not be extended directly, but rather specified through a {@link Retryer.Builder}.
-     */
+    /** A strategy for backing off (delaying) during retries. */
     @FunctionalInterface
-    interface Retry {
+    interface BackoffStrategy {
 
       /**
-       * Optionally modifies the initial request.
-       *
-       * @implSpec the default implementation returns the given request as-is
+       * Returns the {@link Duration} to wait for before retrying the request for the given retry
+       * number.
        */
-      default HttpRequest begin(HttpRequest request) {
-        return request;
-      }
+      Duration backoff(Context context);
 
-      /**
-       * Returns the next request to be sent, or {@code Optional.empty()} if the given response or
-       * exception is to be returned or thrown as-is.
-       */
-      Optional<RetryAttempt> next(Context context);
-
-      /** Context for the retry. */
-      interface Context {
-        /**
-         * Returns the last-sent request. Note that this might be different from the {@link
-         * HttpResponse#request() request} of this context's response (e.g. redirects).
-         */
-        HttpRequest request();
-
-        /** Returns the resulting response. */
-        Optional<HttpResponse<?>> response();
-
-        /** Returns the resulting exception. */
-        Optional<Throwable> exception();
-
-        /** Returns the number of times the request has been retried. */
-        int retryCount();
-
-        /**
-         * Creates a new retry context.
-         *
-         * @throws IllegalArgumentException if it is not that case that exactly one of {@code
-         *     response} or {@code exception} is non-null, of if {@code retryCount} is negative
-         */
-        static Context of(
-            HttpRequest request,
-            @Nullable HttpResponse<?> response,
-            @Nullable Throwable exception,
-            int retryCount) {
-          return new Context() {
-            @Override
-            public HttpRequest request() {
-              return request;
-            }
-
-            @Override
-            public Optional<HttpResponse<?>> response() {
-              return Optional.ofNullable(response);
-            }
-
-            @Override
-            public Optional<Throwable> exception() {
-              return Optional.ofNullable(exception);
-            }
-
-            @Override
-            public int retryCount() {
-              return retryCount;
-            }
-          };
-        }
-      }
-
-      static Builder newBuilder() {
-        return new Builder();
-      }
-
-      /** A builder of {@link Retry} instances. */
-      class Builder {
-        private static final int DEFAULT_MAX_ATTEMPTS = 5;
-
-        private int maxRetries = DEFAULT_MAX_ATTEMPTS;
-        private Function<HttpRequest, HttpRequest> beginWith = Function.identity();
-        private final List<RetryCondition> conditions = new ArrayList<>();
-        private BackoffStrategy backoffStrategy = BackoffStrategy.none();
-
-        Builder() {}
-
-        @CanIgnoreReturnValue
-        public Builder beginWith(Function<HttpRequest, HttpRequest> requestModifier) {
-          this.beginWith = requireNonNull(requestModifier);
-          return this;
-        }
-
-        @CanIgnoreReturnValue
-        public Builder atMost(int maxRetries) {
-          requireArgument(maxRetries > 0, "maxRetries must be positive");
-          this.maxRetries = maxRetries;
-          return this;
-        }
-
-        @CanIgnoreReturnValue
-        public Builder backoff(BackoffStrategy backoffStrategy) {
-          this.backoffStrategy = requireNonNull(backoffStrategy);
-          return this;
-        }
-
-        @SafeVarargs
-        @CanIgnoreReturnValue
-        public final Builder onException(Class<? extends Throwable>... exceptionTypes) {
-          return onException(Set.of(exceptionTypes), Context::request);
-        }
-
-        @CanIgnoreReturnValue
-        public final Builder onException(
-            Set<Class<? extends Throwable>> exceptionTypes,
-            Function<Context, HttpRequest> requestModifier) {
-          var exceptionTypesCopy = Set.copyOf(exceptionTypes);
-          return onException(
-              t -> exceptionTypesCopy.stream().anyMatch(c -> c.isInstance(t)), requestModifier);
-        }
-
-        @CanIgnoreReturnValue
-        public Builder onException(Predicate<Throwable> exceptionPredicate) {
-          return onException(exceptionPredicate, Context::request);
-        }
-
-        @CanIgnoreReturnValue
-        public Builder onException(
-            Predicate<Throwable> exceptionPredicate,
-            Function<Context, HttpRequest> requestModifier) {
-          conditions.add(
-              new RetryCondition(
-                  (__, e) -> e != null && exceptionPredicate.test(e), requestModifier));
-          return this;
-        }
-
-        @CanIgnoreReturnValue
-        public Builder onStatus(Integer... codes) {
-          return onStatus(Set.of(codes), Context::request);
-        }
-
-        @CanIgnoreReturnValue
-        public Builder onStatus(
-            Set<Integer> codes, Function<Context, HttpRequest> requestModifier) {
-          var codesCopy = Set.copyOf(codes);
-          return onStatus(codesCopy::contains, requestModifier);
-        }
-
-        @CanIgnoreReturnValue
-        public Builder onStatus(Predicate<Integer> statusPredicate) {
-          return onStatus(statusPredicate, Context::request);
-        }
-
-        @CanIgnoreReturnValue
-        public Builder onStatus(
-            Predicate<Integer> statusPredicate, Function<Context, HttpRequest> requestModifier) {
-          conditions.add(
-              new RetryCondition(
-                  (r, __) -> r != null && statusPredicate.test(r.statusCode()), requestModifier));
-          return this;
-        }
-
-        @CanIgnoreReturnValue
-        public Builder onResponse(Predicate<HttpResponse<?>> responsePredicate) {
-          return onResponse(responsePredicate, Context::request);
-        }
-
-        @CanIgnoreReturnValue
-        public Builder onResponse(
-            Predicate<HttpResponse<?>> responsePredicate,
-            Function<Context, HttpRequest> requestModifier) {
-          conditions.add(
-              new RetryCondition(
-                  (r, __) -> r != null && responsePredicate.test(r), requestModifier));
-          return this;
-        }
-
-        public Retry build() {
-          return new RetryImpl(maxRetries, beginWith, conditions, backoffStrategy);
-        }
-
-        private static final class RetryCondition {
-          final BiPredicate<HttpResponse<?>, Throwable> predicate;
-          final Function<Context, HttpRequest> requestModifier;
-
-          RetryCondition(
-              BiPredicate<HttpResponse<?>, Throwable> predicate,
-              Function<Context, HttpRequest> requestModifier) {
-            this.predicate = requireNonNull(predicate);
-            this.requestModifier = requireNonNull(requestModifier);
-          }
-        }
-
-        private static final class RetryImpl implements Retry {
-          private final int maxRetries;
-          private final Function<HttpRequest, HttpRequest> beginWith;
-          private final List<RetryCondition> conditions;
-          private final BackoffStrategy backoffStrategy;
-
-          RetryImpl(
-              int maxRetries,
-              Function<HttpRequest, HttpRequest> beginWith,
-              List<RetryCondition> conditions,
-              BackoffStrategy backoffStrategy) {
-            this.maxRetries = maxRetries;
-            this.beginWith = beginWith;
-            this.conditions = List.copyOf(conditions);
-            this.backoffStrategy = backoffStrategy;
-          }
-
-          @Override
-          public HttpRequest begin(HttpRequest request) {
-            return beginWith.apply(request);
-          }
-
-          @Override
-          public Optional<RetryAttempt> next(Context context) {
-            return context.retryCount() < maxRetries
-                ? eval(context)
-                    .map(
-                        nextRequest ->
-                            RetryAttempt.of(
-                                nextRequest, backoffStrategy.backoff(context.retryCount())))
-                : Optional.empty();
-          }
-
-          private Optional<HttpRequest> eval(Context context) {
-            for (var condition : conditions) {
-              if (condition.predicate.test(
-                  context.response().orElse(null), context.exception().orElse(null))) {
-                return Optional.of(condition.requestModifier.apply(context));
-              }
-            }
-            return Optional.empty();
-          }
-        }
-      }
-
-      /** A strategy for backing off (delaying) during retries. */
-      @FunctionalInterface
-      interface BackoffStrategy {
-
-        /**
-         * Returns the {@link Duration} to wait for before retrying the request for the given retry
-         * number.
-         */
-        Duration backoff(int retryCount);
-
-        /** Returns a {@code BackoffStrategy} with no delays. */
-        static BackoffStrategy none() {
-          return __ -> Duration.ZERO;
-        }
+      /** Returns a {@code BackoffStrategy} with no delays. */
+      static BackoffStrategy none() {
+        return __ -> Duration.ZERO;
       }
     }
 
-    /** A builder of {@link Retryer} objects. */
-    final class Builder {
-      private final List<SelectionCondition> conditions = new ArrayList<>();
+    /** Returns a new {@link Retrier.Builder}. */
+    static Builder newBuilder() {
+      return new Builder();
+    }
 
-      private static final class SelectionCondition {
-        final BiPredicate<HttpRequest, Chain<?>> selector;
-        final Consumer<Retry.Builder> spec;
+    /** A builder of {@link Retrier} instances. */
+    class Builder {
+      private static final int DEFAULT_MAX_ATTEMPTS = 5;
 
-        SelectionCondition(
-            BiPredicate<HttpRequest, Chain<?>> selector, Consumer<Retry.Builder> spec) {
-          this.selector = requireNonNull(selector);
-          this.spec = requireNonNull(spec);
-        }
-      }
+      private int maxRetries = DEFAULT_MAX_ATTEMPTS;
+      private Function<HttpRequest, HttpRequest> beginWith = Function.identity();
+      private final List<RetryCondition> conditions = new ArrayList<>();
+      private BackoffStrategy backoffStrategy = BackoffStrategy.none();
 
       Builder() {}
 
-      public Builder always(Consumer<Retry.Builder> retryBuilder) {
-        conditions.add(new SelectionCondition((__, ___) -> true, retryBuilder));
+      @CanIgnoreReturnValue
+      public Builder beginWith(Function<HttpRequest, HttpRequest> requestModifier) {
+        this.beginWith = requireNonNull(requestModifier);
         return this;
       }
 
-      public Builder when(Predicate<HttpRequest> selector, Consumer<Retry.Builder> spec) {
-        conditions.add(new SelectionCondition((req, __) -> selector.test(req), spec));
+      @CanIgnoreReturnValue
+      public Builder atMost(int maxRetries) {
+        requireArgument(maxRetries > 0, "maxRetries must be positive");
+        this.maxRetries = maxRetries;
         return this;
       }
 
-      public Builder when(
-          BiPredicate<HttpRequest, Chain<?>> selector, Consumer<Retry.Builder> spec) {
-        conditions.add(new SelectionCondition(selector, spec));
+      @CanIgnoreReturnValue
+      public Builder backoff(BackoffStrategy backoffStrategy) {
+        this.backoffStrategy = requireNonNull(backoffStrategy);
         return this;
       }
 
-      public Retryer build() {
-        return new SelectiveRetryer(conditions);
+      @SafeVarargs
+      @CanIgnoreReturnValue
+      public final Builder onException(Class<? extends Throwable>... exceptionTypes) {
+        return onException(Set.of(exceptionTypes), Context::request);
       }
 
-      private static final class SelectiveRetryer implements Retryer {
-        private final List<SelectionCondition> condition;
+      @CanIgnoreReturnValue
+      public final Builder onException(
+          Set<Class<? extends Throwable>> exceptionTypes,
+          Function<Context, HttpRequest> requestModifier) {
+        var exceptionTypesCopy = Set.copyOf(exceptionTypes);
+        return onException(
+            t -> exceptionTypesCopy.stream().anyMatch(c -> c.isInstance(t)), requestModifier);
+      }
 
-        SelectiveRetryer(List<SelectionCondition> condition) {
-          this.condition = List.copyOf(condition);
+      @CanIgnoreReturnValue
+      public Builder onException(Predicate<Throwable> exceptionPredicate) {
+        return onException(exceptionPredicate, Context::request);
+      }
+
+      @CanIgnoreReturnValue
+      public Builder onException(
+          Predicate<Throwable> exceptionPredicate, Function<Context, HttpRequest> requestModifier) {
+        conditions.add(
+            new RetryCondition(
+                (__, e) -> e != null && exceptionPredicate.test(e), requestModifier));
+        return this;
+      }
+
+      @CanIgnoreReturnValue
+      public Builder onStatus(Integer... codes) {
+        return onStatus(Set.of(codes), Context::request);
+      }
+
+      @CanIgnoreReturnValue
+      public Builder onStatus(Set<Integer> codes, Function<Context, HttpRequest> requestModifier) {
+        var codesCopy = Set.copyOf(codes);
+        return onStatus(codesCopy::contains, requestModifier);
+      }
+
+      @CanIgnoreReturnValue
+      public Builder onStatus(Predicate<Integer> statusPredicate) {
+        return onStatus(statusPredicate, Context::request);
+      }
+
+      @CanIgnoreReturnValue
+      public Builder onStatus(
+          Predicate<Integer> statusPredicate, Function<Context, HttpRequest> requestModifier) {
+        conditions.add(
+            new RetryCondition(
+                (r, __) -> r != null && statusPredicate.test(r.statusCode()), requestModifier));
+        return this;
+      }
+
+      @CanIgnoreReturnValue
+      public Builder onResponse(Predicate<HttpResponse<?>> responsePredicate) {
+        return onResponse(responsePredicate, Context::request);
+      }
+
+      @CanIgnoreReturnValue
+      public Builder onResponse(
+          Predicate<HttpResponse<?>> responsePredicate,
+          Function<Context, HttpRequest> requestModifier) {
+        conditions.add(
+            new RetryCondition((r, __) -> r != null && responsePredicate.test(r), requestModifier));
+        return this;
+      }
+
+      public Retrier build() {
+        return new RetrierImpl(maxRetries, beginWith, conditions, backoffStrategy);
+      }
+
+      private static final class RetryCondition {
+        final BiPredicate<HttpResponse<?>, Throwable> predicate;
+        final Function<Context, HttpRequest> requestModifier;
+
+        RetryCondition(
+            BiPredicate<HttpResponse<?>, Throwable> predicate,
+            Function<Context, HttpRequest> requestModifier) {
+          this.predicate = requireNonNull(predicate);
+          this.requestModifier = requireNonNull(requestModifier);
+        }
+      }
+
+      private static final class RetrierImpl implements Retrier {
+        private final int maxRetries;
+        private final Function<HttpRequest, HttpRequest> beginWith;
+        private final List<RetryCondition> conditions;
+        private final BackoffStrategy backoffStrategy;
+
+        RetrierImpl(
+            int maxRetries,
+            Function<HttpRequest, HttpRequest> beginWith,
+            List<RetryCondition> conditions,
+            BackoffStrategy backoffStrategy) {
+          this.maxRetries = maxRetries;
+          this.beginWith = beginWith;
+          this.conditions = List.copyOf(conditions);
+          this.backoffStrategy = backoffStrategy;
         }
 
         @Override
-        public Optional<Retry> retryOf(HttpRequest request, Chain<?> chain) {
-          for (var entry : condition) {
-            if (entry.selector.test(request, chain)) {
-              var builder = new Retry.Builder();
-              entry.spec.accept(builder);
-              return Optional.of(builder.build());
+        public HttpRequest begin(HttpRequest request) {
+          return beginWith.apply(request);
+        }
+
+        @Override
+        public Optional<RetryAttempt> next(Context context) {
+          return context.retryCount() < maxRetries
+              ? eval(context)
+                  .map(
+                      nextRequest -> RetryAttempt.of(nextRequest, backoffStrategy.backoff(context)))
+              : Optional.empty();
+        }
+
+        private Optional<HttpRequest> eval(Context context) {
+          for (var condition : conditions) {
+            if (condition.predicate.test(
+                context.response().orElse(null), context.exception().orElse(null))) {
+              return Optional.of(condition.requestModifier.apply(context));
             }
           }
           return Optional.empty();
@@ -1778,24 +1712,25 @@ public class Methanol extends HttpClient {
   }
 
   private static final class RetryingInterceptor implements Interceptor {
-    private final Retryer retryer;
+    private final BiPredicate<HttpRequest, Chain<?>> selector;
+    private final Retrier retrier;
     private final Delayer delayer;
 
-    RetryingInterceptor(Retryer retryer, Delayer delayer) {
-      this.retryer = requireNonNull(retryer);
+    RetryingInterceptor(
+        BiPredicate<HttpRequest, Chain<?>> selector, Retrier retrier, Delayer delayer) {
+      this.selector = requireNonNull(selector);
+      this.retrier = requireNonNull(retrier);
       this.delayer = requireNonNull(delayer);
     }
 
     @Override
     public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
         throws IOException, InterruptedException {
-      var maybeRetry = retryer.retryOf(request, chain);
-      if (maybeRetry.isEmpty()) {
+      if (!selector.test(request, chain)) {
         return chain.forward(request);
       }
 
-      var retry = maybeRetry.get();
-      var attempt = Retryer.RetryAttempt.of(retry.begin(request), Duration.ZERO);
+      var attempt = Retrier.RetryAttempt.of(retrier.begin(request), Duration.ZERO);
       int retryCount = 0;
       while (true) {
         if (!attempt.delay().isZero()) {
@@ -1811,7 +1746,7 @@ public class Methanol extends HttpClient {
         }
 
         var maybeAttempt =
-            retry.next(Retryer.Retry.Context.of(request, response, exception, retryCount));
+            retrier.next(Retrier.Context.of(request, response, exception, retryCount));
         if (maybeAttempt.isPresent()) {
           attempt = maybeAttempt.get();
         } else if (response != null) {
@@ -1831,18 +1766,14 @@ public class Methanol extends HttpClient {
     @Override
     public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
         HttpRequest request, Chain<T> chain) {
-      var maybeRetry = retryer.retryOf(request, chain);
-      if (maybeRetry.isEmpty()) {
-        return chain.forwardAsync(request);
-      }
-
-      var retry = maybeRetry.get();
-      return continueRetry(
-          retry, Retryer.RetryAttempt.of(retry.begin(request), Duration.ZERO), chain, 0);
+      return selector.test(request, chain)
+          ? continueRetry(
+              retrier, Retrier.RetryAttempt.of(retrier.begin(request), Duration.ZERO), chain, 0)
+          : chain.forwardAsync(request);
     }
 
     private <T> CompletableFuture<HttpResponse<T>> continueRetry(
-        Retryer.Retry retry, Retryer.RetryAttempt prevAttempt, Chain<T> chain, int retryCount) {
+        Retrier retry, Retrier.RetryAttempt prevAttempt, Chain<T> chain, int retryCount) {
       return delayer
           .delay(() -> {}, prevAttempt.delay(), Runnable::run)
           .thenCompose(
@@ -1853,7 +1784,7 @@ public class Methanol extends HttpClient {
                           (response, exception) ->
                               retry
                                   .next(
-                                      Retryer.Retry.Context.of(
+                                      Retrier.Context.of(
                                           prevAttempt.request(),
                                           response,
                                           Utils.getDeepCompletionCause(exception),
