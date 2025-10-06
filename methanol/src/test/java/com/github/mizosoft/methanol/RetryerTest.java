@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.github.mizosoft.methanol.Methanol.Retryer.Retry;
 import com.github.mizosoft.methanol.testing.RecordingHttpClient;
 import com.github.mizosoft.methanol.testing.TestException;
 import java.io.IOException;
@@ -527,10 +528,10 @@ class RetryerTest {
   @Test
   void retryConditionOrder() {
     final class Entry {
-      final Consumer<Methanol.Retryer.Retry.Builder> spec;
+      final Consumer<Retry.Builder> spec;
       final String expectedType;
 
-      Entry(Consumer<Methanol.Retryer.Retry.Builder> spec, String expectedType) {
+      Entry(Consumer<Retry.Builder> spec, String expectedType) {
         this.spec = spec;
         this.expectedType = expectedType;
       }
@@ -579,5 +580,28 @@ class RetryerTest {
       var call = recordingClient.awaitCall();
       verifyThat(call.request()).containsHeader("X-Retry-Type", entry.expectedType);
     }
+  }
+
+  @Test
+  void modifyRequestOnFirstCall() {
+    var client =
+        clientBuilder
+            .interceptor(
+                Methanol.Retryer.newBuilder()
+                    .always(
+                        retry ->
+                            retry
+                                .atMost(1)
+                                .beginWith(
+                                    request ->
+                                        MutableRequest.copyOf(request)
+                                            .header("X-First-Call", "true")
+                                            .build()))
+                    .build()
+                    .toInterceptor())
+            .build();
+    client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+
+    verifyThat(recordingClient.awaitCall().request()).containsHeader("X-First-Call", "true");
   }
 }

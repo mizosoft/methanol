@@ -732,7 +732,10 @@ public class Methanol extends HttpClient {
       }
     }
 
-    /** A strategy for retrying a request based on the given response or exception. */
+    /**
+     * A strategy for retrying a request based on the given response or exception. This interface
+     * should not be extended directly, but rather specified through a {@link Retryer.Builder}.
+     */
     @FunctionalInterface
     interface Retry {
 
@@ -755,7 +758,7 @@ public class Methanol extends HttpClient {
       interface Context {
         /**
          * Returns the last-sent request. Note that this might be different from the {@link
-         * HttpResponse#request()} of this context's response (e.g. redirects).
+         * HttpResponse#request() request} of this context's response (e.g. redirects).
          */
         HttpRequest request();
 
@@ -803,6 +806,10 @@ public class Methanol extends HttpClient {
         }
       }
 
+      static Builder newBuilder() {
+        return new Builder();
+      }
+
       /** A builder of {@link Retry} instances. */
       class Builder {
         private static final int DEFAULT_MAX_ATTEMPTS = 5;
@@ -822,7 +829,7 @@ public class Methanol extends HttpClient {
 
         @CanIgnoreReturnValue
         public Builder atMost(int maxRetries) {
-          requireArgument(maxRetries > 0, "maxAttempts must be positive");
+          requireArgument(maxRetries > 0, "maxRetries must be positive");
           this.maxRetries = maxRetries;
           return this;
         }
@@ -1835,19 +1842,19 @@ public class Methanol extends HttpClient {
     }
 
     private <T> CompletableFuture<HttpResponse<T>> continueRetry(
-        Retryer.Retry retry, Retryer.RetryAttempt attempt, Chain<T> chain, int retryCount) {
+        Retryer.Retry retry, Retryer.RetryAttempt prevAttempt, Chain<T> chain, int retryCount) {
       return delayer
-          .delay(() -> {}, attempt.delay(), Runnable::run)
+          .delay(() -> {}, prevAttempt.delay(), Runnable::run)
           .thenCompose(
               __ ->
                   chain
-                      .forwardAsync(attempt.request())
+                      .forwardAsync(prevAttempt.request())
                       .handle(
                           (response, exception) ->
                               retry
                                   .next(
                                       Retryer.Retry.Context.of(
-                                          attempt.request(),
+                                          prevAttempt.request(),
                                           response,
                                           Utils.getDeepCompletionCause(exception),
                                           retryCount))
