@@ -32,6 +32,7 @@ import com.github.mizosoft.methanol.BodyDecoder.Factory;
 import com.github.mizosoft.methanol.Methanol.Interceptor.Chain;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.adapter.PayloadHandlerExecutor;
+import com.github.mizosoft.methanol.internal.cache.HttpDates;
 import com.github.mizosoft.methanol.internal.cache.RedirectingInterceptor;
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.internal.concurrent.SharedExecutors;
@@ -39,6 +40,7 @@ import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.github.mizosoft.methanol.internal.extensions.HttpResponsePublisher;
 import com.github.mizosoft.methanol.internal.flow.FlowSupport;
 import com.github.mizosoft.methanol.internal.function.Unchecked;
+import com.github.mizosoft.methanol.internal.util.Compare;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.InlineMe;
 import java.io.IOException;
@@ -61,7 +63,9 @@ import java.net.http.HttpResponse.BodySubscriber;
 import java.net.http.HttpResponse.PushPromiseHandler;
 import java.net.http.WebSocket;
 import java.nio.ByteBuffer;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -74,6 +78,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Publisher;
 import java.util.concurrent.Flow.Subscription;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -684,8 +689,11 @@ public class Methanol extends HttpClient {
     }
   }
 
-  /** A strategy for retrying a request based on the resulting response or exception. */
-  @FunctionalInterface
+  /**
+   * A strategy for retrying a request based on the resulting response or exception. This interface
+   * should not be extended directly, but rather declaratively specified with {@link
+   * Retrier.Builder}.
+   */
   public interface Retrier {
 
     /**
@@ -738,7 +746,10 @@ public class Methanol extends HttpClient {
       /** Returns the resulting exception. */
       Optional<Throwable> exception();
 
-      /** Returns the number of times the request has been retried. */
+      /**
+       * Returns the number of times the request has been retried. This will be 0 for the first call
+       * to {@link Retrier#next(Context)}.
+       */
       int retryCount();
 
       /**
@@ -803,7 +814,7 @@ public class Methanol extends HttpClient {
       }
     }
 
-    /** A strategy for backing off (delaying) during retries. */
+    /** A strategy for backing off (delaying) before a retry retries. */
     @FunctionalInterface
     interface BackoffStrategy {
 
@@ -813,9 +824,128 @@ public class Methanol extends HttpClient {
        */
       Duration backoff(Context context);
 
-      /** Returns a {@code BackoffStrategy} with no delays. */
+      /**
+       * Returns a {@code BackoffStrategy} that applies <a
+       * href="https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/">full
+       * jitter</a> to this {@code BackoffStrategy}. Calling this method is equivalent to {@link
+       * #withJitter(double) withJitter(1.0)}.
+       */
+      default BackoffStrategy withJitter() {
+        return withJitter(1.0);
+      }
+
+      /**
+       * Returns a {@code BackoffStrategy} that applies <a
+       * href="https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/">full
+       * jitter</a> to this {@code BackoffStrategy}, where the degree of "fullness" is specified by
+       * the given factor.
+       */
+      default BackoffStrategy withJitter(double factor) {
+        requireArgument(
+            Double.compare(factor, 0.0) >= 0 && Double.compare(factor, 1.0) <= 0,
+            "Expected %f to be between 0.0 and 1.0",
+            factor);
+        return context -> {
+          long delayMillis = backoff(context).toMillis();
+          long jitterRangeMillis = Math.round(delayMillis * factor);
+          return Duration.ofMillis(
+              Math.max(
+                  0,
+                  delayMillis
+                      - jitterRangeMillis
+                      + Math.round(jitterRangeMillis * ThreadLocalRandom.current().nextDouble())));
+        };
+      }
+
+      /** Returns a {@code BackoffStrategy} that applies no delays. */
       static BackoffStrategy none() {
         return __ -> Duration.ZERO;
+      }
+
+      /** Returns a {@code BackoffStrategy} that applies a fixed delay every retry. */
+      static BackoffStrategy fixed(Duration delay) {
+        requirePositiveDuration(delay);
+        return __ -> delay;
+      }
+
+      /**
+       * Returns a {@code BackoffStrategy} that applies a linearly increasing delay every retry,
+       * where {@code base} specifies the first delay, and {@code cap} specifies the maximum delay.
+       */
+      static BackoffStrategy linear(Duration base, Duration cap) {
+        requirePositiveDuration(base);
+        return context -> {
+          int retryCount = context.retryCount();
+          return retryCount < Integer.MAX_VALUE // Avoid overflow.
+              ? Compare.min(cap, base.multipliedBy(retryCount + 1))
+              : cap;
+        };
+      }
+
+      /**
+       * Returns a {@code BackoffStrategy} that applies an exponentially (base 2) increasing delay
+       * every retry, where {@code base} specifies the first delay, and {@code cap} specifies the
+       * maximum delay.
+       */
+      static BackoffStrategy exponential(Duration base, Duration cap) {
+        requirePositiveDuration(base);
+        requirePositiveDuration(cap);
+        requireArgument(
+            base.compareTo(cap) <= 0,
+            "Base delay (%s) must be less than or equal to cap delay (%s)",
+            base,
+            cap);
+        return context -> {
+          int retryCount = context.retryCount();
+          return retryCount < Long.SIZE - 2 // Avoid overflow.
+              ? Compare.min(cap, base.multipliedBy(1L << context.retryCount()))
+              : cap;
+        };
+      }
+
+      /**
+       * Returns a {@code BackoffStrategy} that gets the delay from the value of response's {@code
+       * Retry-After} header, or defers to the given {@code BackoffStrategy} if no such header
+       * exists.
+       */
+      static BackoffStrategy retryAfterOr(BackoffStrategy fallback) {
+        return retryAfterOr(fallback, Utils.systemMillisUtc());
+      }
+
+      /**
+       * Returns a {@code BackoffStrategy} that gets the delay from the value of response's {@code
+       * Retry-After} header, or defers to the given {@code BackoffStrategy} if no such header
+       * exists. If {@code Retry-After} has an HTTP date value, the current time to compute the
+       * delay against is acquired using the given clock.
+       */
+      static BackoffStrategy retryAfterOr(BackoffStrategy fallback, Clock clock) {
+        requireNonNull(fallback);
+        requireNonNull(clock);
+        return context ->
+            context
+                .response()
+                .flatMap(response -> BackoffStrategy.tryFindDelayFromRetryAfter(response, clock))
+                .orElseGet(() -> fallback.backoff(context));
+      }
+
+      private static Optional<Duration> tryFindDelayFromRetryAfter(
+          HttpResponse<?> response, Clock clock) {
+        return response
+            .headers()
+            .firstValue("Retry-After")
+            .flatMap(
+                value ->
+                    HttpDates.tryParseDeltaSeconds(value)
+                        .or(
+                            () ->
+                                HttpDates.tryParseHttpDate(value)
+                                    .map(
+                                        retryDate ->
+                                            Compare.max(
+                                                Duration.ZERO,
+                                                Duration.between(
+                                                    clock.instant(),
+                                                    retryDate.toInstant(ZoneOffset.UTC))))));
       }
     }
 
@@ -920,6 +1050,11 @@ public class Methanol extends HttpClient {
         conditions.add(
             new RetryCondition((r, __) -> r != null && responsePredicate.test(r), requestModifier));
         return this;
+      }
+
+      @CanIgnoreReturnValue
+      public Builder timeout(Duration timeout) {
+        throw new UnsupportedOperationException();
       }
 
       public Retrier build() {
