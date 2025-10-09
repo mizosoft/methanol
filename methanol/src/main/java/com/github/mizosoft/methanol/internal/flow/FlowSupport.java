@@ -104,14 +104,6 @@ public class FlowSupport {
         : DEFAULT_PREFETCH_FACTOR;
   }
 
-  /**
-   * Returns an {@code IllegalArgumentException} to signal if the subscriber requests a non-positive
-   * number of items.
-   */
-  public static IllegalArgumentException illegalRequest() {
-    return new IllegalArgumentException("non-positive subscription request");
-  }
-
   /** Returns the prefetch property or a default of {@value DEFAULT_PREFETCH}. */
   public static int prefetch() {
     return PREFETCH;
