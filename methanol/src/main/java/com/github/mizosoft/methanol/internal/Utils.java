@@ -96,13 +96,15 @@ public class Utils {
   @CanIgnoreReturnValue
   public static Duration requirePositiveDuration(Duration duration) {
     requireArgument(
-        !(duration.isNegative() || duration.isZero()), "non-positive duration: %s", duration);
+        !(duration.isNegative() || duration.isZero()),
+        "Expected a positive duration: %s",
+        duration);
     return duration;
   }
 
   @CanIgnoreReturnValue
   public static Duration requireNonNegativeDuration(Duration duration) {
-    requireArgument(!duration.isNegative(), "negative duration: %s", duration);
+    requireArgument(!duration.isNegative(), "Expected a non-negative duration: %s", duration);
     return duration;
   }
 
