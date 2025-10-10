@@ -22,18 +22,17 @@
 
 package com.github.mizosoft.methanol;
 
-import java.net.http.HttpTimeoutException;
+import java.io.IOException;
 
 /**
- * Thrown when a {@link com.github.mizosoft.methanol.RetryingInterceptor} timeouts out before
- * getting a successful response.
+ * Thrown when a {@link com.github.mizosoft.methanol.RetryingInterceptor} exhausts maximum retries.
  *
  * @see RetryingInterceptor
  */
-public class HttpRetryTimeoutException extends HttpTimeoutException {
+public class HttpRetriesExhaustedException extends IOException {
 
   /** Creates a new {@code HttpRetryTimeoutException}. */
-  public HttpRetryTimeoutException(String message) {
+  public HttpRetriesExhaustedException(String message) {
     super(message);
   }
 }
