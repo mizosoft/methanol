@@ -326,7 +326,7 @@ class MethanolClientTest {
 
   @Test
   @UseHttps
-  void exchangeaddPush(TestSubscriber<HttpResponse<String>> subscriber) {
+  void exchangeWithPush(TestSubscriber<HttpResponse<String>> subscriber) {
     var client = clientBuilder.version(Version.HTTP_2).build();
 
     // Accept all push promises but the first.
@@ -335,7 +335,7 @@ class MethanolClientTest {
         client.exchange(
             GET(serverUri),
             BodyHandlers.ofString(),
-            push -> rejectedFirstPush.compareAndSet(false, true) ? null : BodyHandlers.ofString());
+            __ -> rejectedFirstPush.compareAndSet(false, true) ? null : BodyHandlers.ofString());
 
     int pushCount = 3;
     var decompressedPaths = Set.of("/push0", "/push2");
@@ -403,7 +403,14 @@ class MethanolClientTest {
   void syncRetryingWithInterceptors() throws Exception {
     int maxRetries = 3;
 
-    var client = clientBuilder.interceptor(new RetryingInterceptor(maxRetries)).build();
+    var client =
+        clientBuilder
+            .interceptor(
+                RetryingInterceptor.newBuilder()
+                    .maxRetries(maxRetries)
+                    .onStatus(HTTP_UNAVAILABLE)
+                    .build())
+            .build();
 
     for (int i = 0; i < maxRetries; i++) {
       server.enqueue(new MockResponse.Builder().code(HTTP_UNAVAILABLE).build());
@@ -423,7 +430,14 @@ class MethanolClientTest {
     }
     server.enqueue(new MockResponse.Builder().body("I'm back!").build());
 
-    var client = clientBuilder.interceptor(new RetryingInterceptor(maxRetries)).build();
+    var client =
+        clientBuilder
+            .interceptor(
+                RetryingInterceptor.newBuilder()
+                    .maxRetries(maxRetries)
+                    .onStatus(HTTP_UNAVAILABLE)
+                    .build())
+            .build();
     verifyThat(client.sendAsync(GET(serverUri), BodyHandlers.ofString()).get())
         .hasCode(200)
         .hasBody("I'm back!");
@@ -774,47 +788,5 @@ class MethanolClientTest {
 
   private static String acceptEncodingValue() {
     return String.join(", ", BodyDecoder.Factory.installedBindings().keySet());
-  }
-
-  private static final class RetryingInterceptor implements Interceptor {
-    private final int maxRetryCount;
-
-    RetryingInterceptor(int maxRetryCount) {
-      this.maxRetryCount = maxRetryCount;
-    }
-
-    @Override
-    public <T> HttpResponse<T> intercept(HttpRequest request, Chain<T> chain)
-        throws IOException, InterruptedException {
-      var response = chain.forward(request);
-      for (int retries = 0;
-          response.statusCode() == HTTP_UNAVAILABLE && retries < maxRetryCount;
-          retries++) {
-        response = chain.forward(request);
-      }
-      return response;
-    }
-
-    @Override
-    public <T> CompletableFuture<HttpResponse<T>> interceptAsync(
-        HttpRequest request, Chain<T> chain) {
-      var responseFuture = chain.forwardAsync(request);
-      for (int i = 0; i < maxRetryCount; i++) {
-        final int j = i;
-        responseFuture =
-            responseFuture.thenCompose(
-                res -> handleRetry(res, () -> chain.forwardAsync(request), j));
-      }
-      return responseFuture;
-    }
-
-    private <R> CompletableFuture<HttpResponse<R>> handleRetry(
-        HttpResponse<R> response,
-        Supplier<CompletableFuture<HttpResponse<R>>> callOnRetry,
-        int retryCount) {
-      return response.statusCode() == HTTP_UNAVAILABLE && retryCount < maxRetryCount
-          ? callOnRetry.get()
-          : CompletableFuture.completedFuture(response);
-    }
   }
 }
