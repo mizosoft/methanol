@@ -26,7 +26,7 @@
     
     
       
-        <title>Object Mapping - Methanol</title>
+        <title>Adapters - Methanol</title>
       
     
     
@@ -126,7 +126,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Object Mapping
+              Adapters
             
           </span>
         </div>
@@ -398,7 +398,7 @@
   
   
   <span class="md-ellipsis">
-    Object Mapping
+    Adapters
     
   </span>
   
@@ -411,7 +411,7 @@
   
   
   <span class="md-ellipsis">
-    Object Mapping
+    Adapters
     
   </span>
   
@@ -1180,7 +1180,7 @@ Adapters for the most popular serialization libraries are provided by separate m
 <span class="w">        </span><span class="p">.</span><span class="na">defaultHeader</span><span class="p">(</span><span class="s">&quot;Accept&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;application/vnd.github.v3+json&quot;</span><span class="p">)</span>
 <span class="w">        </span><span class="p">.</span><span class="na">build</span><span class="p">();</span>
 </code></pre></div>
-<p>An <code>AdapterCodec</code> groups together one or more adapters, possibly targeting different mapping schemes. It helps <code>Methanol</code>
+<p>An <a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/AdapterCodec.html"><code>AdapterCodec</code></a> groups together one or more adapters, possibly targeting different mapping schemes. It helps <code>Methanol</code>
 to select the correct adapter based on the request's or response's <a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/MediaType.html"><code>MediaType</code></a>.</p>
 <p><a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html#basic()"><code>basic()</code></a> adds the basic adapter, which encodes &amp; decodes basic types like <code>String</code> &amp; <code>InputStream</code>.
 Trace through the Javadoc for all supported basic types.</p>
@@ -1257,9 +1257,9 @@ When you're writing adapters, it's a good idea to extend from <a href="https://m
 </code></pre></div>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
-</div>
 <p>Make sure your encoders call <code>AbstractBodyAdapter::attachMediaType</code>, so the created <code>BodyPublisher</code> can be converted to a <code>MimeBodyPublisher</code>.
 That way, requests get the correct <code>Content-Type</code> header added by <code>Methanol</code>.</p>
+</div>
 <h2 id="buffering-vs-streaming">Buffering vs Streaming<a class="headerlink" href="#buffering-vs-streaming" title="Permanent link">&para;</a></h2>
 <p>Decoders typically load the whole response body into memory before deserialization. If your responses tend to have large bodies,
 or you'd prefer the memory efficiency afforded by streaming sources, you can ask to get a <code>Supplier&lt;T&gt;</code> instead.</p>
@@ -1330,7 +1330,7 @@ Here's how it'd be properly implemented for our HTML adapter's decoder.</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2024 mizosoft
+      Copyright &copy; 2025 mizosoft
     </div>
   
   

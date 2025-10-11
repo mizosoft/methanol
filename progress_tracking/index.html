@@ -389,7 +389,7 @@
   
   
   <span class="md-ellipsis">
-    Object Mapping
+    Adapters
     
   </span>
   
@@ -1063,12 +1063,12 @@ bytes transferred &amp; time passed, both calculated since the last event. </p>
 your listener. That's useful in case your listener does something like GUI updates.</p>
 </div>
 <p>You'd want it to be invoked in the GUI thread rather than an arbitrary HTTP client thread.</p>
-<div class="highlight"><pre><span></span><code>    ```java hl_lines=&quot;3&quot;
-    var tracker = ProgressTracker.newBuilder()
-        .bytesTransferredThreshold(50 * 1024)
-        .executor(javafx.application.Platform::runLater)
-        .build();
-    ```
+<div class="highlight"><pre><span></span><code>```java hl_lines=&quot;3&quot;
+var tracker = ProgressTracker.newBuilder()
+    .bytesTransferredThreshold(50 * 1024)
+    .executor(javafx.application.Platform::runLater)
+    .build();
+```
 </code></pre></div>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <p>You track download progress by attaching a <code>Listener</code> to a response's <code>BodyHandler</code>. Similarly, upload
@@ -1178,7 +1178,7 @@ progress is tracked by registering a <code>Listener</code> with a request's <cod
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2024 mizosoft
+      Copyright &copy; 2025 mizosoft
     </div>
   
   

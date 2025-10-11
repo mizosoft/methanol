@@ -387,7 +387,7 @@
   
   
   <span class="md-ellipsis">
-    Object Mapping
+    Adapters
     
   </span>
   
@@ -1211,7 +1211,7 @@ The easiest way is to create one from a <code>RedisURI</code>.</p>
 <h3 id="redisconnectionprovider"><code>RedisConnectionProvider</code><a class="headerlink" href="#redisconnectionprovider" title="Permanent link">&para;</a></h3>
 <p>Another way to create a <code>RedisStorageExtension</code> is to provide your implementation of <a href="https://mizosoft.github.io/methanol/api/latest/methanol.redis/com/github/mizosoft/methanol/store/redis/RedisConnectionProvider.html"><code>RedisConnectionProvider</code></a>,
 which is an abstraction for the provision and release of redis connections. Currently, the implementation relies on
-a single connection during lifetime of the cache, and releases it when the cache is closed. <code>RedisConnectionProvider::close</code> is also invoked when the cache is closed.</p>
+a single connection during the lifetime of the cache and releases it when the cache is closed. <code>RedisConnectionProvider::close</code> is also invoked when the cache is closed.</p>
 <h3 id="timeouts">Timeouts<a class="headerlink" href="#timeouts" title="Permanent link">&para;</a></h3>
 <p>For better memory efficiency, the extension implements stream semantics upon Redis. This means that whatever
 read or written is seen as a stream of bytes that is acquired progressively as chunks, rather than first loaded entirely
@@ -1220,8 +1220,7 @@ streams that are not utilized anymore are deleted. There are two:</p>
 <ul>
 <li><code>editorLockInactiveTtlSeconds</code>: The number of seconds an uncommitted entry that is still being edited can live during
   an editor's inactivity. Default is <code>5</code> seconds.</li>
-<li><code>staleEntryInactiveTtlSeconds</code>: the number of seconds a deleted entry is allowed to live during an inactivity from<br />
-  a potential concurrent reader. Default is <code>3</code> seconds.</li>
+<li><code>staleEntryInactiveTtlSeconds</code>: the number of seconds a deleted entry is allowed to live during an inactivity from a potential concurrent reader. Default is <code>3</code> seconds.</li>
 </ul>
 <p>You can customize these with <code>RedisStorageExtension.Builder</code>.</p>
 
@@ -1261,7 +1260,7 @@ streams that are not utilized anymore are deleted. There are two:</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; 2024 mizosoft
+      Copyright &copy; 2025 mizosoft
     </div>
   
   
