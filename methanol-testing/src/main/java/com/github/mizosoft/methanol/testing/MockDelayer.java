@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.testing;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
@@ -34,6 +35,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A Delayer that delays tasks based on a {@link MockClock}'s time. */
@@ -47,7 +51,11 @@ public final class MockDelayer implements Delayer {
    */
   private final boolean dispatchEagerly;
 
+  @GuardedBy("lock")
   private final Queue<DelayedFuture> taskQueue = new PriorityQueue<>(DelayedFuture.DELAY_ORDER);
+
+  private final Lock lock = new ReentrantLock();
+  private final Condition notEmpty = lock.newCondition();
 
   public MockDelayer(MockClock clock) {
     this(clock, true);
@@ -63,8 +71,12 @@ public final class MockDelayer implements Delayer {
   public CompletableFuture<Void> delay(Runnable task, Duration delay, Executor executor) {
     var now = clock.peekInstant(); // Do not advance clock if auto-advancing.
     var future = new DelayedFuture(task, now.plus(delay), executor, clock);
-    synchronized (taskQueue) {
+    lock.lock();
+    try {
       taskQueue.add(future);
+      notEmpty.signalAll();
+    } finally {
+      lock.unlock();
     }
 
     if (dispatchEagerly) {
@@ -74,20 +86,27 @@ public final class MockDelayer implements Delayer {
   }
 
   public int taskCount() {
-    synchronized (taskQueue) {
+    lock.lock();
+    try {
       return taskQueue.size();
+    } finally {
+      lock.unlock();
     }
   }
 
   public DelayedFuture peekEarliestFuture() {
-    synchronized (taskQueue) {
+    lock.lock();
+    try {
       assertThat(taskQueue).isNotEmpty();
       return taskQueue.element();
+    } finally {
+      lock.unlock();
     }
   }
 
   public DelayedFuture peekLatestFuture() {
-    synchronized (taskQueue) {
+    lock.lock();
+    try {
       assertThat(taskQueue).isNotEmpty();
 
       var iter = taskQueue.iterator();
@@ -96,10 +115,30 @@ public final class MockDelayer implements Delayer {
         future = iter.next();
       } while (iter.hasNext());
       return future;
+    } finally {
+      lock.unlock();
     }
   }
 
-  void dispatchReadyTasks(Instant now, boolean ignoreRejected) {
+  public DelayedFuture awaitingPeekLatestFuture() throws InterruptedException {
+    lock.lock();
+    try {
+      while (taskQueue.isEmpty()) {
+        notEmpty.await();
+      }
+
+      var iter = taskQueue.iterator();
+      DelayedFuture future;
+      do {
+        future = iter.next();
+      } while (iter.hasNext());
+      return future;
+    } finally {
+      lock.unlock();
+    }
+  }
+
+  private void dispatchReadyTasks(Instant now, boolean ignoreRejected) {
     DelayedFuture ready;
     while ((ready = pollReady(now)) != null) {
       try {
@@ -113,12 +152,15 @@ public final class MockDelayer implements Delayer {
   }
 
   private @Nullable DelayedFuture pollReady(Instant now) {
-    synchronized (taskQueue) {
+    lock.lock();
+    try {
       DelayedFuture future;
       if ((future = taskQueue.peek()) != null && future.isReady(now)) {
         taskQueue.poll();
         return future;
       }
+    } finally {
+      lock.unlock();
     }
     return null;
   }

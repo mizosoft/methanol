@@ -43,8 +43,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -94,7 +94,16 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
     listener.onFirstAttempt(retry.request);
     while (true) {
       if (!retry.delay.isZero()) {
-        TimeUnit.MILLISECONDS.sleep(retry.delay.toMillis());
+        var delayedFuture = delayer.delay(() -> {}, retry.delay, Runnable::run);
+        try {
+          delayedFuture.get();
+        } catch (InterruptedException e) {
+          delayedFuture.cancel(true);
+          throw e;
+        } catch (ExecutionException e) {
+          // Cannot happen.
+          throw new AssertionError(e);
+        }
       }
 
       HttpResponse<T> response = null;

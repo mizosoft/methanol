@@ -24,359 +24,382 @@ package com.github.mizosoft.methanol;
 
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.from;
 
+import com.github.mizosoft.methanol.internal.function.Unchecked;
+import com.github.mizosoft.methanol.testing.ExecutorExtension;
+import com.github.mizosoft.methanol.testing.ExecutorExtension.ExecutorSpec;
+import com.github.mizosoft.methanol.testing.MockClock;
+import com.github.mizosoft.methanol.testing.MockDelayer;
 import com.github.mizosoft.methanol.testing.RecordingHttpClient;
 import com.github.mizosoft.methanol.testing.TestException;
 import java.io.IOException;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 @Timeout(1)
+@ExtendWith(ExecutorExtension.class)
 class RetryingInterceptorTest {
-  private RecordingHttpClient recordingClient;
-  private Methanol.WithClientBuilder clientBuilder;
+  private Executor executor;
 
   @BeforeEach
-  void setUp() {
-    recordingClient = new RecordingHttpClient();
-    clientBuilder = Methanol.newBuilder(recordingClient);
+  @ExecutorSpec(ExecutorExtension.ExecutorType.CACHED_POOL)
+  void setUp(Executor executor) {
+    this.executor = executor;
   }
 
-  @Test
-  void retryOnException() {
+  CompletableFuture<HttpResponse<Void>> send(Methanol client, HttpRequest request, boolean async) {
+    return async
+        ? client.sendAsync(request, BodyHandlers.discarding())
+        : Unchecked.supplyAsync(() -> client.send(request, BodyHandlers.discarding()), executor);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryOnException(boolean async) {
+    var recordingClient = new RecordingHttpClient();
     var client =
-        clientBuilder
+        Methanol.newBuilder(recordingClient)
             .interceptor(
                 RetryingInterceptor.newBuilder()
                     .maxRetries(2)
                     .onException(TestException.class)
                     .build())
             .build();
-    var responseFuture =
-        client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
 
     recordingClient.awaitCall().completeExceptionally(new TestException());
     recordingClient.awaitCall().completeExceptionally(new TestException());
     recordingClient.awaitCall().completeExceptionally(new TestException());
 
     assertThat(responseFuture)
-        .isCompletedExceptionally()
-        .failsWithin(Duration.ZERO)
+        .failsWithin(Duration.ofSeconds(1))
         .withThrowableOfType(ExecutionException.class)
         .withCauseExactlyInstanceOf(TestException.class);
   }
 
-  @Test
-  void retryOnExceptionEndingWithDifferentException() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryOnExceptionEndingWithDifferentException(boolean async) {
+    var recordingClient = new RecordingHttpClient();
     var client =
-        clientBuilder
+        Methanol.newBuilder(recordingClient)
             .interceptor(
                 RetryingInterceptor.newBuilder()
                     .maxRetries(2)
                     .onException(TestException.class)
                     .build())
             .build();
-    var responseFuture =
-        client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
 
     recordingClient.awaitCall().completeExceptionally(new TestException());
     recordingClient.awaitCall().completeExceptionally(new IOException()); // No retry.
 
     assertThat(responseFuture)
-        .isCompletedExceptionally()
-        .failsWithin(Duration.ZERO)
+        .failsWithin(Duration.ofSeconds(1))
         .withThrowableOfType(ExecutionException.class)
         .withCauseExactlyInstanceOf(IOException.class);
   }
 
-  @Test
-  void retryOnExceptionEndingWithSuccess() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryOnExceptionEndingWithSuccess(boolean async) {
+    var recordingClient = new RecordingHttpClient();
     var client =
-        clientBuilder
+        Methanol.newBuilder(recordingClient)
             .interceptor(
                 RetryingInterceptor.newBuilder()
                     .maxRetries(2)
                     .onException(TestException.class)
                     .build())
             .build();
-    var responseFuture =
-        client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
 
     recordingClient.awaitCall().completeExceptionally(new TestException());
     recordingClient.awaitCall().complete();
 
-    assertThat(responseFuture).isCompleted();
+    assertThat(responseFuture).succeedsWithin(Duration.ofSeconds(1));
   }
 
-  @Test
-  void retryOnExceptionPredicate() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryOnExceptionPredicate(boolean async) {
+    var recordingClient = new RecordingHttpClient();
     var client =
-        clientBuilder
+        Methanol.newBuilder(recordingClient)
             .interceptor(
                 RetryingInterceptor.newBuilder()
                     .maxRetries(2)
                     .onException(e -> e instanceof TestException || e instanceof IOException)
                     .build())
             .build();
-    var responseFuture =
-        client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
 
     recordingClient.awaitCall().completeExceptionally(new TestException());
     recordingClient.awaitCall().completeExceptionally(new IOException());
     recordingClient.awaitCall().completeExceptionally(new TestException());
 
     assertThat(responseFuture)
-        .isCompletedExceptionally()
-        .failsWithin(Duration.ZERO)
+        .failsWithin(Duration.ofSeconds(1))
         .withThrowableOfType(ExecutionException.class)
         .withCauseExactlyInstanceOf(TestException.class);
   }
 
-  @Test
-  void retryOnExceptionPredicateEndingWithDifferentException() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryOnExceptionPredicateEndingWithDifferentException(boolean async) {
+    var recordingClient = new RecordingHttpClient();
     var client =
-        clientBuilder
+        Methanol.newBuilder(recordingClient)
             .interceptor(
                 RetryingInterceptor.newBuilder()
                     .maxRetries(2)
                     .onException(e -> e instanceof TestException || e instanceof IOException)
                     .build())
             .build();
-    var responseFuture =
-        client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
 
     recordingClient.awaitCall().completeExceptionally(new TestException());
     recordingClient.awaitCall().completeExceptionally(new IllegalStateException());
 
     assertThat(responseFuture)
-        .isCompletedExceptionally()
-        .failsWithin(Duration.ZERO)
+        .failsWithin(Duration.ofSeconds(1))
         .withThrowableOfType(ExecutionException.class)
         .withCauseExactlyInstanceOf(IllegalStateException.class);
   }
 
-  @Test
-  void retryOnExceptionPredicateEndingWithSuccess() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryOnExceptionPredicateEndingWithSuccess(boolean async) {
+    var recordingClient = new RecordingHttpClient();
     var client =
-        clientBuilder
+        Methanol.newBuilder(recordingClient)
             .interceptor(
                 RetryingInterceptor.newBuilder()
                     .maxRetries(2)
                     .onException(e -> e instanceof TestException || e instanceof IOException)
                     .build())
             .build();
-    var responseFuture =
-        client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
 
     recordingClient.awaitCall().completeExceptionally(new TestException());
     recordingClient.awaitCall().complete();
 
-    assertThat(responseFuture).isCompleted();
+    assertThat(responseFuture).succeedsWithin(Duration.ofSeconds(1));
   }
 
-  @Test
-  void retryOnStatus() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryOnStatus(boolean async) {
+    var recordingClient = new RecordingHttpClient();
     var client =
-        clientBuilder
+        Methanol.newBuilder(recordingClient)
             .interceptor(RetryingInterceptor.newBuilder().maxRetries(2).onStatus(500).build())
             .build();
-    var responseFuture =
-        client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
 
     recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
     recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
     recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
 
     assertThat(responseFuture)
-        .isCompleted()
-        .succeedsWithin(Duration.ZERO)
+        .succeedsWithin(Duration.ofSeconds(1))
         .matches(r -> r.statusCode() == 500);
   }
 
-  @Test
-  void retryOnStatusEndingWithDifferentStatus() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryOnStatusEndingWithDifferentStatus(boolean async) {
+    var recordingClient = new RecordingHttpClient();
     var client =
-        clientBuilder
+        Methanol.newBuilder(recordingClient)
             .interceptor(RetryingInterceptor.newBuilder().maxRetries(2).onStatus(500).build())
             .build();
-    var responseFuture =
-        client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
 
     recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
     recordingClient.awaitCall().complete(builder -> builder.statusCode(200));
 
     assertThat(responseFuture)
-        .isCompleted()
-        .succeedsWithin(Duration.ZERO)
+        .succeedsWithin(Duration.ofSeconds(1))
         .matches(r -> r.statusCode() == 200);
   }
 
-  @Test
-  void retryOnStatusEndingWithException() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryOnStatusEndingWithException(boolean async) {
+    var recordingClient = new RecordingHttpClient();
     var client =
-        clientBuilder
+        Methanol.newBuilder(recordingClient)
             .interceptor(RetryingInterceptor.newBuilder().maxRetries(2).onStatus(500).build())
             .build();
-    var responseFuture =
-        client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
 
     recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
     recordingClient.awaitCall().completeExceptionally(new TestException());
 
     assertThat(responseFuture)
-        .isCompletedExceptionally()
-        .failsWithin(Duration.ZERO)
+        .failsWithin(Duration.ofSeconds(1))
         .withThrowableOfType(ExecutionException.class)
         .withCauseExactlyInstanceOf(TestException.class);
   }
 
-  @Test
-  void retryOnStatusPredicate() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryOnStatusPredicate(boolean async) {
+    var recordingClient = new RecordingHttpClient();
     var client =
-        clientBuilder
+        Methanol.newBuilder(recordingClient)
             .interceptor(
                 RetryingInterceptor.newBuilder()
                     .maxRetries(2)
                     .onStatus(HttpStatus::isServerError)
                     .build())
             .build();
-    var responseFuture =
-        client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
 
     recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
     recordingClient.awaitCall().complete(builder -> builder.statusCode(501));
     recordingClient.awaitCall().complete(builder -> builder.statusCode(502));
 
     assertThat(responseFuture)
-        .isCompleted()
-        .succeedsWithin(Duration.ZERO)
+        .succeedsWithin(Duration.ofSeconds(1))
         .matches(r -> r.statusCode() == 502);
   }
 
-  @Test
-  void retryOnStatusPredicateEndingWithDifferentStatus() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryOnStatusPredicateEndingWithDifferentStatus(boolean async) {
+    var recordingClient = new RecordingHttpClient();
     var client =
-        clientBuilder
+        Methanol.newBuilder(recordingClient)
             .interceptor(
                 RetryingInterceptor.newBuilder()
                     .maxRetries(2)
                     .onStatus(HttpStatus::isServerError)
                     .build())
             .build();
-    var responseFuture =
-        client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
 
     recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
     recordingClient.awaitCall().complete(builder -> builder.statusCode(404));
 
     assertThat(responseFuture)
-        .isCompleted()
-        .succeedsWithin(Duration.ZERO)
+        .succeedsWithin(Duration.ofSeconds(1))
         .matches(r -> r.statusCode() == 404);
   }
 
-  @Test
-  void retryOnStatusPredicateEndingWithException() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryOnStatusPredicateEndingWithException(boolean async) {
+    var recordingClient = new RecordingHttpClient();
     var client =
-        clientBuilder
+        Methanol.newBuilder(recordingClient)
             .interceptor(
                 RetryingInterceptor.newBuilder()
                     .maxRetries(2)
                     .onStatus(HttpStatus::isServerError)
                     .build())
             .build();
-    var responseFuture =
-        client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
 
     recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
     recordingClient.awaitCall().completeExceptionally(new TestException());
 
     assertThat(responseFuture)
-        .isCompletedExceptionally()
-        .failsWithin(Duration.ZERO)
+        .failsWithin(Duration.ofSeconds(1))
         .withThrowableOfType(ExecutionException.class)
         .withCauseExactlyInstanceOf(TestException.class);
   }
 
-  @Test
-  void retryOnResponsePredicate() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryOnResponsePredicate(boolean async) {
+    var recordingClient = new RecordingHttpClient();
     var client =
-        clientBuilder
+        Methanol.newBuilder(recordingClient)
             .interceptor(
                 RetryingInterceptor.newBuilder()
                     .maxRetries(2)
                     .onResponse(r -> r.headers().map().containsKey("X-Retry"))
                     .build())
             .build();
-    var responseFuture =
-        client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
 
     recordingClient.awaitCall().complete(builder -> builder.header("X-Retry", "true"));
     recordingClient.awaitCall().complete(builder -> builder.header("X-Retry", "true"));
     recordingClient.awaitCall().complete(builder -> builder.header("X-Retry", "true"));
 
     assertThat(responseFuture)
-        .isCompleted()
-        .succeedsWithin(Duration.ZERO)
+        .succeedsWithin(Duration.ofSeconds(1))
         .matches(r -> r.headers().map().containsKey("X-Retry"));
   }
 
-  @Test
-  void retryOnResponsePredicateEndingWithDifferentResponse() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryOnResponsePredicateEndingWithDifferentResponse(boolean async) {
+    var recordingClient = new RecordingHttpClient();
     var client =
-        clientBuilder
+        Methanol.newBuilder(recordingClient)
             .interceptor(
                 RetryingInterceptor.newBuilder()
                     .maxRetries(2)
                     .onResponse(r -> r.headers().map().containsKey("X-Retry"))
                     .build())
             .build();
-    var responseFuture =
-        client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
 
     recordingClient.awaitCall().complete(builder -> builder.header("X-Retry", "true"));
     recordingClient.awaitCall().complete();
 
     assertThat(responseFuture)
-        .isCompleted()
-        .succeedsWithin(Duration.ZERO)
+        .succeedsWithin(Duration.ofSeconds(1))
         .matches(r -> !r.headers().map().containsKey("X-Retry"));
   }
 
-  @Test
-  void retryOnResponsePredicateEndingWithException() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryOnResponsePredicateEndingWithException(boolean async) {
+    var recordingClient = new RecordingHttpClient();
     var client =
-        clientBuilder
+        Methanol.newBuilder(recordingClient)
             .interceptor(
                 RetryingInterceptor.newBuilder()
                     .maxRetries(2)
                     .onResponse(r -> r.headers().map().containsKey("X-Retry"))
                     .build())
             .build();
-    var responseFuture =
-        client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
 
     recordingClient.awaitCall().complete(builder -> builder.header("X-Retry", "true"));
     recordingClient.awaitCall().completeExceptionally(new TestException());
 
     assertThat(responseFuture)
-        .isCompletedExceptionally()
-        .failsWithin(Duration.ZERO)
+        .failsWithin(Duration.ofSeconds(1))
         .withThrowableOfType(ExecutionException.class)
         .withCauseExactlyInstanceOf(TestException.class);
   }
 
-  @Test
-  void retryWithRequestModification() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryWithRequestModification(boolean async) {
+    var recordingClient = new RecordingHttpClient();
     var client =
-        clientBuilder
+        Methanol.newBuilder(recordingClient)
             .interceptor(
                 RetryingInterceptor.newBuilder()
                     .maxRetries(6)
@@ -408,8 +431,7 @@ class RetryingInterceptorTest {
                     .build())
             .build();
 
-    var responseFuture =
-        client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
 
     recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
     var call = recordingClient.awaitCall();
@@ -438,15 +460,16 @@ class RetryingInterceptorTest {
     call.complete(builder -> builder.statusCode(200));
 
     assertThat(responseFuture)
-        .isCompleted()
-        .succeedsWithin(Duration.ZERO)
+        .succeedsWithin(Duration.ofSeconds(1))
         .matches(HttpStatus::isSuccessful);
   }
 
-  @Test
-  void retryWithRequestSelector() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryWithRequestSelector(boolean async) {
+    var recordingClient = new RecordingHttpClient();
     var client =
-        clientBuilder
+        Methanol.newBuilder(recordingClient)
             .interceptor(
                 RetryingInterceptor.newBuilder()
                     .maxRetries(2)
@@ -455,32 +478,28 @@ class RetryingInterceptorTest {
             .build();
 
     // This request is not retried.
-    var responseFuture =
-        client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
     recordingClient.awaitCall().completeExceptionally(new TestException());
     assertThat(responseFuture)
-        .isCompletedExceptionally()
-        .failsWithin(Duration.ZERO)
+        .failsWithin(Duration.ofSeconds(1))
         .withThrowableOfType(ExecutionException.class)
         .withCauseExactlyInstanceOf(TestException.class);
 
     // This request is not retried.
     var secondResponseFuture =
-        client.sendAsync(
-            MutableRequest.GET("https://example.com").header("X-Retry", "true"),
-            BodyHandlers.discarding());
+        send(client, MutableRequest.GET("https://example.com").header("X-Retry", "true"), async);
     recordingClient.awaitCall().completeExceptionally(new TestException());
     recordingClient.awaitCall().completeExceptionally(new TestException());
     recordingClient.awaitCall().completeExceptionally(new TestException());
     assertThat(secondResponseFuture)
-        .isCompletedExceptionally()
-        .failsWithin(Duration.ZERO)
+        .failsWithin(Duration.ofSeconds(1))
         .withThrowableOfType(ExecutionException.class)
         .withCauseExactlyInstanceOf(TestException.class);
   }
 
-  @Test
-  void retryConditionOrder() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryConditionOrder(boolean async) {
     final class Entry {
       final Consumer<RetryingInterceptor.Builder> spec;
       final String expectedType;
@@ -523,22 +542,28 @@ class RetryingInterceptorTest {
                                 MutableRequest.copyOf(context.request())
                                     .header("X-Retry-Type", "onStatus")),
                 "onResponse"))) {
-      clientBuilder = Methanol.newBuilder(recordingClient);
+      var recordingClient = new RecordingHttpClient();
+      var clientBuilder = Methanol.newBuilder(recordingClient);
       var retryingInterceptorBuilder = RetryingInterceptor.newBuilder();
       entry.spec.accept(retryingInterceptorBuilder);
       var client = clientBuilder.interceptor(retryingInterceptorBuilder.build()).build();
-      client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
+
+      send(client, MutableRequest.GET("https://example.com"), async);
 
       recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
+
       var call = recordingClient.awaitCall();
       verifyThat(call.request()).containsHeader("X-Retry-Type", entry.expectedType);
+      call.complete();
     }
   }
 
-  @Test
-  void modifyRequestOnFirstCall() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void modifyRequestOnFirstCall(boolean async) {
+    var recordingClient = new RecordingHttpClient();
     var client =
-        clientBuilder
+        Methanol.newBuilder(recordingClient)
             .interceptor(
                 RetryingInterceptor.newBuilder()
                     .maxRetries(1)
@@ -547,8 +572,54 @@ class RetryingInterceptorTest {
                             MutableRequest.copyOf(request).header("X-First-Call", "true").build())
                     .build())
             .build();
-    client.sendAsync(MutableRequest.GET("https://example.com"), BodyHandlers.discarding());
 
-    verifyThat(recordingClient.awaitCall().request()).containsHeader("X-First-Call", "true");
+    send(client, MutableRequest.GET("https://example.com"), async);
+    var call = recordingClient.awaitCall();
+    verifyThat(call.request()).containsHeader("X-First-Call", "true");
+    call.complete();
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryWithBackoff(boolean async) throws InterruptedException {
+    var clock = new MockClock();
+    var delayer = new MockDelayer(clock);
+    var recordingClient = new RecordingHttpClient();
+    var client =
+        Methanol.newBuilder(recordingClient)
+            .interceptor(
+                RetryingInterceptor.newBuilder()
+                    .maxRetries(3)
+                    .onStatus(500)
+                    .backoff(
+                        RetryingInterceptor.BackoffStrategy.linear(
+                            Duration.ofSeconds(1), Duration.ofSeconds(10)))
+                    .delayer(delayer)
+                    .build())
+            .build();
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
+
+    // First retry.
+    recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
+    assertThat(delayer.awaitingPeekLatestFuture().delay()).isEqualTo(Duration.ofSeconds(1));
+
+    clock.advance(Duration.ofSeconds(1));
+
+    // Second retry.
+    recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
+    assertThat(delayer.awaitingPeekLatestFuture().delay()).isEqualTo(Duration.ofSeconds(2));
+
+    clock.advance(Duration.ofSeconds(2));
+
+    // Third retry.
+    recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
+    assertThat(delayer.awaitingPeekLatestFuture().delay()).isEqualTo(Duration.ofSeconds(3));
+
+    clock.advance(Duration.ofSeconds(3));
+
+    recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
+    assertThat(responseFuture)
+        .succeedsWithin(Duration.ofSeconds(1))
+        .returns(500, from(HttpResponse::statusCode));
   }
 }

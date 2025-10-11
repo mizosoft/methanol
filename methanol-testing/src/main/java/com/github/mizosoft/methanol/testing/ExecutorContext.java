@@ -78,17 +78,12 @@ public final class ExecutorContext implements AutoCloseable {
         var service = (ExecutorService) executor;
         service.shutdown();
 
-        // Clear interruption flag to not throw from awaitTermination if this thread is interrupted
-        // by some test.
-        boolean interrupted = Thread.interrupted();
-        try {
-          if (!service.awaitTermination(TestUtils.TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+        int gracefulShutdownSeconds = Math.max(1, TestUtils.TIMEOUT_SECONDS / 2);
+        if (!awaitTermination(service, gracefulShutdownSeconds)) {
+          service.shutdownNow(); // Interrupt workers.
+          if (!awaitTermination(service, TestUtils.TIMEOUT_SECONDS)) {
             exceptions.add(
                 new TimeoutException("Timed out while waiting for pool termination: " + executor));
-          }
-        } finally {
-          if (interrupted) {
-            Thread.currentThread().interrupt();
           }
         }
       }
@@ -99,6 +94,20 @@ public final class ExecutorContext implements AutoCloseable {
     if (!exceptions.isEmpty()) {
       throw new AggregateException(
           "Multiple exceptions while closing executors for (" + name + ")", exceptions);
+    }
+  }
+
+  private static boolean awaitTermination(ExecutorService executor, int timeoutSeconds)
+      throws InterruptedException {
+    // Clear interruption flag to not throw from awaitTermination if this thread is interrupted
+    // by some test.
+    boolean interrupted = Thread.interrupted();
+    try {
+      return executor.awaitTermination(timeoutSeconds, TimeUnit.SECONDS);
+    } finally {
+      if (interrupted) {
+        Thread.currentThread().interrupt();
+      }
     }
   }
 }
