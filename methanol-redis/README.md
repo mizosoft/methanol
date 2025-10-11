@@ -8,7 +8,7 @@ Redis Standalone & Redis Cluster setups.
 ### Gradle
 
 ```kotlin
-implementation("com.github.mizosoft.methanol:methanol-redis:1.8.3")
+implementation("com.github.mizosoft.methanol:methanol-redis:1.8.4")
 ```
 
 ### Maven
@@ -17,7 +17,7 @@ implementation("com.github.mizosoft.methanol:methanol-redis:1.8.3")
 <dependency>
   <groupId>com.github.mizosoft.methanol</groupId>
   <artifactId>methanol-redis</artifactId>
-  <version>1.8.3</version>
+  <version>1.8.4</version>
 </dependency>
 ```
 

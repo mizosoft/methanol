@@ -10,7 +10,7 @@ Kotlin extensions for Methanol, which include:
 ### Gradle
 
 ```kotlin
-implementation("com.github.mizosoft.methanol:methanol-kotlin:1.8.3")
+implementation("com.github.mizosoft.methanol:methanol-kotlin:1.8.4")
 ```
 
 ## Usage

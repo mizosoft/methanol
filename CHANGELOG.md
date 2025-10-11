@@ -1,12 +1,21 @@
 # Change Log
 
+## Version 1.8.4
+
+* Fixed [#129], where streaming large files through `WritableBodyPublisher` on slow networks caused high memory usage.
+  Now the publisher blocks writers when the upload speed can't keep up. Memory usage is bounded according to the expression: 
+    ```java
+    int memoryQuota = Integer.getInteger("com.github.mizosoft.methanol.flow.prefetch", 8) * Integer.getInteger("jdk.httpclient.bufsize", 16 * 1024);
+    ```
+  Note that this also reflects on `MoreBodyPublishers::ofOutputStream` & `MoreBodyPublishers::ofWritableByteChannel`.
+
+* Fixed [#134], where the system language affected how HTTP dates were formated.
+
 ## Version 1.8.3
 
-* Fixed [#121](https://github.com/mizosoft/methanol/issues/121), where the response body was retained throughout the
-  entire read timeout, resulting in a "timed" memory leak. This happened as the previously used JVM-wide scheduler
-  retained
-  references to timeout tasks (which retained references to the response body through a reference chain starting from
-  `TimeoutBodySubscriber`).
+* Fixed [#121](https://github.com/mizosoft/methanol/issues/121), where the response body was retained throughout the entire read timeout, resulting in a "timed"
+  memory leak. This happened as the previously used JVM-wide scheduler retained references to timeout tasks (which
+  retained references to the response body through a reference chain starting from `TimeoutBodySubscriber`).
   Methanol now uses a library-wide scheduler that loses references to timeout tasks when invalidated.
 
 * Fixed [#125](https://github.com/mizosoft/methanol/issues/125), where exception causes where swallowed in sync calls.
