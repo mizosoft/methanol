@@ -1,6 +1,6 @@
 package conventions
 
-import extensions.javaModuleName
+import extensions.optionalJavaModuleName
 import org.jetbrains.dokka.gradle.DokkaTaskPartial
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.jvm.JvmTargetValidationMode
@@ -21,10 +21,15 @@ tasks.withType<KotlinCompile>().configureEach {
   }
 }
 
-tasks.withType<DokkaTaskPartial> {
-  try {
-    moduleName = project.javaModuleName
-  } catch (_: IllegalStateException) {
-    project.logger.warn("Couldn't get Java module name for Kotlin project (${project.displayName})")
+project.optionalJavaModuleName?.let {
+  // Provide compiled Kotlin classes to javac – needed for Java/Kotlin mixed sources to work.
+  tasks.named<JavaCompile>("compileJava") {
+    options.compilerArgumentProviders.add(CommandLineArgumentProvider {
+      listOf("--patch-module", "$it=${sourceSets["main"].output.asPath}")
+    })
+  }
+
+  tasks.withType<DokkaTaskPartial> {
+    moduleName = it
   }
 }

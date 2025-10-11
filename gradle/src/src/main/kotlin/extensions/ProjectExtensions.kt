@@ -46,14 +46,17 @@ private fun Project.findModuleName() =
           .map { it.name.toString() }
           .orElseThrow { IllegalStateException("Couldn't parse module-info.java") }
       }
-    } ?: throw IllegalStateException("No module-info.java in " + this@findModuleName)
+    }
   }
 
-val Project.javaModuleName: String
+val Project.optionalJavaModuleName: String?
   get() = extensions.findByName(MODULE_NAME_EXTENSIONS_NAME) as String?
-    ?: findModuleName().also {
+    ?: findModuleName()?.also {
       extensions.add(String::class, MODULE_NAME_EXTENSIONS_NAME, it)
     }
+
+val Project.javaModuleName: String
+  get() = optionalJavaModuleName ?: throw IllegalStateException("Could not find Java module name for $name")
 
 // These projects are included in coverage numbers.
 val Project.coveredProjects

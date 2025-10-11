@@ -17,7 +17,7 @@ publishing {
   publications {
     create<MavenPublication>("maven") {
       artifactId = project.artifactId
-      from(components.findByName("kotlin") ?: components["java"])
+      from(components["java"])
 
       pom {
         name = project.name
