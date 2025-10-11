@@ -7,7 +7,7 @@ Adapters for XML using Java EE's [JAXB][jaxb].
 ### Gradle
 
 ```kotlin
-implementation("com.github.mizosoft.methanol:methanol-jaxb:1.8.3")
+implementation("com.github.mizosoft.methanol:methanol-jaxb:1.8.4")
 ```
 
 ### Maven
@@ -16,7 +16,7 @@ implementation("com.github.mizosoft.methanol:methanol-jaxb:1.8.3")
 <dependency>
   <groupId>com.github.mizosoft.methanol</groupId>
    <artifactId>methanol-jaxb</artifactId>
-    <version>1.8.3</version>
+    <version>1.8.4</version>
 </dependency>
 ```
 

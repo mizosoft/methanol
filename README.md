@@ -25,23 +25,21 @@ Build time prerequisites in [CONTRIBUTING](CONTRIBUTING.md).
 ### Gradle
 
 ```kotlin
-implementation("com.github.mizosoft.methanol:methanol:1.8.3")
+implementation("com.github.mizosoft.methanol:methanol:1.8.4")
 ```
 
 ### Maven
-
 ```xml
-
 <dependency>
     <groupId>com.github.mizosoft.methanol</groupId>
     <artifactId>methanol</artifactId>
-    <version>1.8.3</version>
+    <version>1.8.4</version>
 </dependency>
 ```
 
 ## Contributing
 
-See [CONTRIBUTING](/CONTRIBUTING.md)
+See [CONTRIBUTING](./CONTRIBUTING.md)
 
 ## License
 
