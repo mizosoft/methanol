@@ -2,6 +2,11 @@
 
 Adapters for [Jackson][jackson].
 
+## Prerequisites
+
+- Java 11 or higher
+- Jackson Databind 2.10.0 or higher
+
 ## Installation
 
 ### Gradle
