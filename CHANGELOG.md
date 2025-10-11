@@ -9,7 +9,7 @@
     ```
   Note that this also reflects on `MoreBodyPublishers::ofOutputStream` & `MoreBodyPublishers::ofWritableByteChannel`.
 
-* Fixed [#134], where the system language affected how HTTP dates were formated.
+* Fixed [#134], where the system language affected how HTTP dates were formatted.
 
 ## Version 1.8.3
 
