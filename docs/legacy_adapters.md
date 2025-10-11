@@ -22,7 +22,7 @@ assertThat(response.body()).isEqualTo(new Person("Bruce Lee"));
 ## Installation
 
 The legacy way to register adapters is through [service providers][serviceloader_javadoc].
-How this is done depends on your project setup. We'll use `methanol-jackson` as an example.
+How this is done depends on your project setup. We'll use [`methanol-jackson`][methanol_jackson] as an example.
 
 ### Module Path
 
@@ -89,8 +89,7 @@ annotationProcessor "com.google.auto.service:auto-service:$autoServiceVersion"
 
 Configure the annotation processor with the compiler plugin.
 
-```xml Person(String name) {
-}
+```xml
 <plugin>
   <artifactId>maven-compiler-plugin</artifactId>
   <configuration>
@@ -150,8 +149,7 @@ public class JacksonJsonAdapters {
 ```
 
 Next, create two provider-configuration files in the resource directory: `META-INF/services`,
-one for  Person(String name) {
-}the encoder and the other for the decoder. Each file must contain the fully qualified
+one for the encoder and the other for the decoder. Each file must contain the fully qualified
 name of the implementation class.
 
 Let's say the above class is in a package named `com.example`. You'll want to have one file for the
@@ -188,3 +186,5 @@ com.example.JacksonJsonAdapters$Decoder
 [serviceloader_javadoc]: https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/ServiceLoader.html
 
 [adaptercodec_javadoc]: https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/AdapterCodec.html
+
+[methanol_jackson]: https://mizosoft.github.io/methanol/adapters/jackson/

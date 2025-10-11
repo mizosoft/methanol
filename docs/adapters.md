@@ -36,7 +36,7 @@ var client =
         .build();
 ```
 
-An `AdapterCodec` groups together one or more adapters, possibly targeting different mapping schemes. It helps `Methanol`
+An [`AdapterCodec`][adapter_codec] groups together one or more adapters, possibly targeting different mapping schemes. It helps `Methanol`
 to select the correct adapter based on the request's or response's [`MediaType`](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/MediaType.html).
 
 [`basic()`][adaptercodec_basic_javadoc] adds the basic adapter, which encodes & decodes basic types like `String` & `InputStream`.
@@ -132,8 +132,8 @@ public abstract class JsoupAdapter extends AbstractBodyAdapter {
 ```
 
 !!! tip
-Make sure your encoders call `AbstractBodyAdapter::attachMediaType`, so the created `BodyPublisher` can be converted to a `MimeBodyPublisher`.
-That way, requests get the correct `Content-Type` header added by `Methanol`.
+    Make sure your encoders call `AbstractBodyAdapter::attachMediaType`, so the created `BodyPublisher` can be converted to a `MimeBodyPublisher`.
+    That way, requests get the correct `Content-Type` header added by `Methanol`.
 
 ## Buffering vs Streaming
 
@@ -195,3 +195,5 @@ See [Legacy Adapter](legacy_adapters.md).
 [abstractbodyadapter_javadoc]: https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/adapter/AbstractBodyAdapter.html
 
 [adaptercodec_basic_javadoc]: https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html#basic()
+
+[adapter_codec]: https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/AdapterCodec.html

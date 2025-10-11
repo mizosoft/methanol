@@ -4,7 +4,7 @@ repo_url: https://github.com/mizosoft/methanol/
 site_url: https://mizosoft.github.io/methanol/
 site_description: 'Lightweight HTTP extensions for Java & Kotlin'
 site_author: mizosoft
-copyright: Copyright &copy; 2024 mizosoft
+copyright: Copyright &copy; 2025 mizosoft
 
 extra_css:
   - css/style.css
@@ -64,7 +64,7 @@ nav:
   - 🔗 Javadoc: api/latest/
   - Documentation:
     - Methanol HttpClient: methanol_httpclient.md
-    - Object Mapping: adapters.md
+    - Adapters: adapters.md
     - Interceptors: interceptors.md
     - Caching: caching.md
     - Decompression: decompression.md

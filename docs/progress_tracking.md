@@ -28,14 +28,15 @@ bytes transferred & time passed, both calculated since the last event.
 !!! tip
     You can use the builder to set an `Executor` that's used for dispatching progress events to 
     your listener. That's useful in case your listener does something like GUI updates.
+
 You'd want it to be invoked in the GUI thread rather than an arbitrary HTTP client thread.
 
-        ```java hl_lines="3"
-        var tracker = ProgressTracker.newBuilder()
-            .bytesTransferredThreshold(50 * 1024)
-            .executor(javafx.application.Platform::runLater)
-            .build();
-        ```
+    ```java hl_lines="3"
+    var tracker = ProgressTracker.newBuilder()
+        .bytesTransferredThreshold(50 * 1024)
+        .executor(javafx.application.Platform::runLater)
+        .build();
+    ```
 
 ## Usage
 

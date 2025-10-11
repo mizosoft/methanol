@@ -30,8 +30,8 @@ var client = Methanol.newBuilder(prebuiltClient).build();
 ```
 
 !!! note
-Default properties don't override those the request already has. For instance, a client with a
-default `Accept: text/html` will not override a request's `Accept: application/json`.
+    Default properties don't override those the request already has. For instance, a client with a
+    default `Accept: text/html` will not override a request's `Accept: application/json`.
 
 ### Transparent Compression
 
@@ -116,7 +116,7 @@ var response = client.send(
 This complements `Methanol`'s base URIs, against which relative ones are resolved.
 
 !!! tip
-Use `MutableRequest::toImmutableRequest` to get an immutable `HttpRequest` snapshot.
+    Use `MutableRequest::toImmutableRequest` to get an immutable `HttpRequest` snapshot.
 
 [interceptors]: interceptors.md
 
