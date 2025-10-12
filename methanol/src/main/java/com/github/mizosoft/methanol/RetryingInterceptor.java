@@ -52,7 +52,27 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 /**
- * An interceptor that retries requests based on a specified policy.
+ * An interceptor that retries HTTP requests based on configurable conditions.
+ *
+ * <p>Retry conditions are evaluated in the order they are added. The first matching condition
+ * determines the next request to send. Later conditions are not evaluated.
+ *
+ * <h2>Example:</h2>
+ *
+ * Retry server errors with exponential backoff:
+ *
+ * <pre>{@code
+ * var client = Methanol.newBuilder()
+ *     .interceptor(RetryingInterceptor.newBuilder()
+ *         .maxRetries(3)
+ *         .backoff(BackoffStrategy.exponential(
+ *             Duration.ofMillis(100),
+ *             Duration.ofSeconds(10)).withJitter())
+ *         .onStatus(500, 502, 503, 504)
+ *         .onException(ConnectException.class)
+ *         .build())
+ *     .build();
+ * }</pre>
  *
  * @see Builder
  */
@@ -349,16 +369,11 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
     int retryCount();
 
     /**
-     * Returns an {@code Optional} specifying the deadline for retrying. If the given deadline is
-     * exceeded, a {@link HttpRetryTimeoutException} is thrown.
+     * Returns an {@code Optional} specifying the deadline for retrying, specified according to
+     * {@link Builder#timeout(Duration)}. If the given deadline is exceeded before a non-retryable
+     * response or exception is received, a {@link HttpRetryTimeoutException} is thrown.
      */
     Optional<Instant> deadline();
-
-    default Context<T> next(
-        HttpRequest request, @Nullable HttpResponse<T> response, @Nullable Throwable exception) {
-      return new ContextImpl<>(
-          request, response, exception, retryCount() + 1, deadline().orElse(null));
-    }
 
     /**
      * Creates a new retry context based on the given state.
@@ -518,6 +533,7 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
                                                 retryDate.toInstant(ZoneOffset.UTC))))));
   }
 
+  /** Returns a new builder of {@code RetryingInterceptor} instances. */
   public static Builder newBuilder() {
     return new Builder();
   }
@@ -555,7 +571,12 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
     INSTANCE
   }
 
-  /** A builder of {@link RetryingInterceptor} instances. */
+  /**
+   * A builder of {@link RetryingInterceptor} instances.
+   *
+   * <p><b>Note:</b> Retry conditions are evaluated in the order they are added. The first matching
+   * condition determines the next request. Later conditions are not evaluated.
+   */
   public static final class Builder {
     private static final int DEFAULT_MAX_ATTEMPTS = 5;
 
@@ -572,12 +593,23 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
 
     Builder() {}
 
+    /**
+     * Specifies the request modifier to be applied before the request is sent for the first time
+     * (attempt 0, not a retry). This can be used to add request headers that should be present on
+     * all attempts.
+     */
     @CanIgnoreReturnValue
     public Builder beginWith(Function<HttpRequest, HttpRequest> requestModifier) {
       this.beginWith = requireNonNull(requestModifier);
       return this;
     }
 
+    /**
+     * Specifies the maximum times the interceptor is allowed to retry the request. After the given
+     * number of retries is exhausted, the interceptor returns the request or exception as-is, or
+     * throws an {@link HttpRetriesExhaustedException} if {@link #throwOnExhaustion()} is specified.
+     * The default {@code maxRetries} is 5.
+     */
     @CanIgnoreReturnValue
     public Builder maxRetries(int maxRetries) {
       requireArgument(maxRetries > 0, "maxRetries must be positive");
@@ -585,18 +617,27 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
       return this;
     }
 
+    /** Specifies the {@code BackoffStrategy} to apply every retry. */
     @CanIgnoreReturnValue
     public Builder backoff(BackoffStrategy backoffStrategy) {
       this.backoffStrategy = requireNonNull(backoffStrategy);
       return this;
     }
 
+    /**
+     * Specifies that the interceptor is to retry the request if an exception with any of the given
+     * types is thrown.
+     */
     @SafeVarargs
     @CanIgnoreReturnValue
     public final Builder onException(Class<? extends Throwable>... exceptionTypes) {
       return onException(Set.of(exceptionTypes), Context::request);
     }
 
+    /**
+     * Specifies that the interceptor is to retry the request, after applying the given request
+     * modifier, if an exception with any of the given types is thrown.
+     */
     @CanIgnoreReturnValue
     public Builder onException(
         Set<Class<? extends Throwable>> exceptionTypes,
@@ -606,11 +647,19 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
           t -> exceptionTypesCopy.stream().anyMatch(c -> c.isInstance(t)), requestModifier);
     }
 
+    /**
+     * Specifies that the interceptor is to retry the request if an exception that satisfies the
+     * given predicate is thrown.
+     */
     @CanIgnoreReturnValue
     public Builder onException(Predicate<Throwable> exceptionPredicate) {
       return onException(exceptionPredicate, Context::request);
     }
 
+    /**
+     * Specifies that the interceptor is to retry the request, after applying the given request
+     * modifier, if an exception that satisfies the given predicate is thrown.
+     */
     @CanIgnoreReturnValue
     public Builder onException(
         Predicate<Throwable> exceptionPredicate,
@@ -621,22 +670,38 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
       return this;
     }
 
+    /**
+     * Specifies that the interceptor is to retry the request if a response with any of the given
+     * status codes is received.
+     */
     @CanIgnoreReturnValue
     public Builder onStatus(Integer... codes) {
       return onStatus(Set.of(codes), Context::request);
     }
 
+    /**
+     * Specifies that the interceptor is to retry the request, after applying the given request
+     * modifier, if a response with any of the given status codes is received.
+     */
     @CanIgnoreReturnValue
     public Builder onStatus(Set<Integer> codes, Function<Context<?>, HttpRequest> requestModifier) {
       var codesCopy = Set.copyOf(codes);
       return onStatus(codesCopy::contains, requestModifier);
     }
 
+    /**
+     * Specifies that the interceptor is to retry the request if a response whose code satisfies the
+     * given predicate is received.
+     */
     @CanIgnoreReturnValue
     public Builder onStatus(Predicate<Integer> statusPredicate) {
       return onStatus(statusPredicate, Context::request);
     }
 
+    /**
+     * Specifies that the interceptor is to retry the request, after applying the given request
+     * modifier, if a response whose code satisfies the given predicate is received.
+     */
     @CanIgnoreReturnValue
     public Builder onStatus(
         Predicate<Integer> statusPredicate, Function<Context<?>, HttpRequest> requestModifier) {
@@ -647,11 +712,19 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
       return this;
     }
 
+    /**
+     * Specifies that the interceptor is to retry the request if a response that satisfies the given
+     * predicate is received.
+     */
     @CanIgnoreReturnValue
     public Builder onResponse(Predicate<HttpResponse<?>> responsePredicate) {
       return onResponse(responsePredicate, Context::request);
     }
 
+    /**
+     * Specifies that the interceptor is to retry the request, after applying the given request
+     * modifier, if a response that satisfies given predicate is received.
+     */
     @CanIgnoreReturnValue
     public Builder onResponse(
         Predicate<HttpResponse<?>> responsePredicate,
@@ -662,11 +735,19 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
       return this;
     }
 
+    /**
+     * Specifies that the interceptor is to retry the request if the retry {@link Context} satisfies
+     * the given predicate.
+     */
     @CanIgnoreReturnValue
     public Builder on(Predicate<Context<?>> predicate) {
       return on(predicate, Context::request);
     }
 
+    /**
+     * Specifies that the interceptor is to retry the request, after applying the given request
+     * modifier, if the retry {@link Context} satisfies the given predicate.
+     */
     @CanIgnoreReturnValue
     public Builder on(
         Predicate<Context<?>> predicate, Function<Context<?>, HttpRequest> requestModifier) {
@@ -674,18 +755,40 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
       return this;
     }
 
+    /**
+     * Sets a timeout for the entire retry process. If the timeout is exceeded before receiving a
+     * non-retryable response or exception, an {@link HttpRetryTimeoutException} is thrown with the
+     * last exception (if any) as a suppressed exception.
+     *
+     * <p>The timeout applies from the start of the first attempt until either:
+     *
+     * <ul>
+     *   <li>A non-retryable response or exception is received
+     *   <li>Maximum retries are exhausted
+     *   <li>The timeout expires
+     * </ul>
+     */
     @CanIgnoreReturnValue
     public Builder timeout(Duration timeout) {
       this.timeout = requirePositiveDuration(timeout);
       return this;
     }
 
+    /** Sets the listener for retry events. */
     @CanIgnoreReturnValue
     public Builder listener(Listener listener) {
       this.listener = requireNonNull(listener);
       return this;
     }
 
+    /**
+     * Specifies that the interceptor is to throw an {@link HttpRetriesExhaustedException} if
+     * retries are exhausted, with the last thrown exception (if any) added as a suppressed
+     * exception.
+     *
+     * <p>By default, when retries are exhausted, the last response or exception is returned/thrown
+     * as-is. This allows you to specify a "give up and throw" behavior on the interceptor.
+     */
     @CanIgnoreReturnValue
     public Builder throwOnExhaustion() {
       this.throwOnExhaustion = true;
@@ -704,15 +807,27 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
       return this;
     }
 
+    /**
+     * Builds a new {@code RetryingInterceptor} that retries all requests based on the conditions
+     * specified so far.
+     */
     public RetryingInterceptor build() {
       return build((__, ___) -> true);
     }
 
+    /**
+     * Builds a new {@code RetryingInterceptor} that only retries requests matched by the given
+     * predicate based on the conditions specified so far.
+     */
     public RetryingInterceptor build(Predicate<HttpRequest> selector) {
       requireNonNull(selector);
       return build((request, __) -> selector.test(request));
     }
 
+    /**
+     * Builds a new {@code RetryingInterceptor} that only retries requests matched by the given
+     * predicate based on the conditions specified so far.
+     */
     public RetryingInterceptor build(BiPredicate<HttpRequest, Chain<?>> selector) {
       return new RetryingInterceptor(selector, this);
     }
