@@ -25,9 +25,9 @@ package com.github.mizosoft.methanol;
 import java.io.IOException;
 
 /**
- * Thrown when a {@link com.github.mizosoft.methanol.RetryingInterceptor} exhausts maximum retries.
+ * Thrown when a {@link RetryInterceptor} exhausts maximum retries.
  *
- * @see RetryingInterceptor
+ * @see RetryInterceptor
  */
 public class HttpRetriesExhaustedException extends IOException {
 

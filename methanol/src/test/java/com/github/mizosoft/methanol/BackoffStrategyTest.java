@@ -25,7 +25,7 @@ package com.github.mizosoft.methanol;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.github.mizosoft.methanol.RetryingInterceptor.BackoffStrategy;
+import com.github.mizosoft.methanol.RetryInterceptor.BackoffStrategy;
 import com.github.mizosoft.methanol.internal.cache.HttpDates;
 import com.github.mizosoft.methanol.testing.MockClock;
 import java.net.http.HttpRequest;
@@ -40,12 +40,10 @@ class BackoffStrategyTest {
   @Test
   void none() {
     assertThat(
-            BackoffStrategy.none()
-                .backoff(RetryingInterceptor.Context.of(request, response, null, 0)))
+            BackoffStrategy.none().backoff(RetryInterceptor.Context.of(request, response, null, 0)))
         .isEqualTo(Duration.ZERO);
     assertThat(
-            BackoffStrategy.none()
-                .backoff(RetryingInterceptor.Context.of(request, response, null, 1)))
+            BackoffStrategy.none().backoff(RetryInterceptor.Context.of(request, response, null, 1)))
         .isEqualTo(Duration.ZERO);
   }
 
@@ -54,11 +52,11 @@ class BackoffStrategyTest {
     var delay = Duration.ofSeconds(1);
     assertThat(
             BackoffStrategy.fixed(delay)
-                .backoff(RetryingInterceptor.Context.of(request, response, null, 0)))
+                .backoff(RetryInterceptor.Context.of(request, response, null, 0)))
         .isEqualTo(delay);
     assertThat(
             BackoffStrategy.fixed(delay)
-                .backoff(RetryingInterceptor.Context.of(request, response, null, 1)))
+                .backoff(RetryInterceptor.Context.of(request, response, null, 1)))
         .isEqualTo(delay);
   }
 
@@ -75,15 +73,15 @@ class BackoffStrategyTest {
     var base = Duration.ofSeconds(1);
     var cap = Duration.ofSeconds(10);
     var strategy = BackoffStrategy.linear(base, cap);
-    assertThat(strategy.backoff(RetryingInterceptor.Context.of(request, response, null, 0)))
+    assertThat(strategy.backoff(RetryInterceptor.Context.of(request, response, null, 0)))
         .isEqualTo(Duration.ofSeconds(1));
-    assertThat(strategy.backoff(RetryingInterceptor.Context.of(request, response, null, 1)))
+    assertThat(strategy.backoff(RetryInterceptor.Context.of(request, response, null, 1)))
         .isEqualTo(Duration.ofSeconds(2));
-    assertThat(strategy.backoff(RetryingInterceptor.Context.of(request, response, null, 2)))
+    assertThat(strategy.backoff(RetryInterceptor.Context.of(request, response, null, 2)))
         .isEqualTo(Duration.ofSeconds(3));
-    assertThat(strategy.backoff(RetryingInterceptor.Context.of(request, response, null, 9)))
+    assertThat(strategy.backoff(RetryInterceptor.Context.of(request, response, null, 9)))
         .isEqualTo(cap);
-    assertThat(strategy.backoff(RetryingInterceptor.Context.of(request, response, null, 20)))
+    assertThat(strategy.backoff(RetryInterceptor.Context.of(request, response, null, 20)))
         .isEqualTo(cap);
   }
 
@@ -100,17 +98,17 @@ class BackoffStrategyTest {
     var base = Duration.ofSeconds(1);
     var cap = Duration.ofSeconds(16);
     var strategy = BackoffStrategy.exponential(base, cap);
-    assertThat(strategy.backoff(RetryingInterceptor.Context.of(request, response, null, 0)))
+    assertThat(strategy.backoff(RetryInterceptor.Context.of(request, response, null, 0)))
         .isEqualTo(Duration.ofSeconds(1));
-    assertThat(strategy.backoff(RetryingInterceptor.Context.of(request, response, null, 1)))
+    assertThat(strategy.backoff(RetryInterceptor.Context.of(request, response, null, 1)))
         .isEqualTo(Duration.ofSeconds(2));
-    assertThat(strategy.backoff(RetryingInterceptor.Context.of(request, response, null, 2)))
+    assertThat(strategy.backoff(RetryInterceptor.Context.of(request, response, null, 2)))
         .isEqualTo(Duration.ofSeconds(4));
-    assertThat(strategy.backoff(RetryingInterceptor.Context.of(request, response, null, 3)))
+    assertThat(strategy.backoff(RetryInterceptor.Context.of(request, response, null, 3)))
         .isEqualTo(Duration.ofSeconds(8));
-    assertThat(strategy.backoff(RetryingInterceptor.Context.of(request, response, null, 4)))
+    assertThat(strategy.backoff(RetryInterceptor.Context.of(request, response, null, 4)))
         .isEqualTo(cap);
-    assertThat(strategy.backoff(RetryingInterceptor.Context.of(request, response, null, 10)))
+    assertThat(strategy.backoff(RetryInterceptor.Context.of(request, response, null, 10)))
         .isEqualTo(cap);
   }
 
@@ -135,7 +133,7 @@ class BackoffStrategyTest {
   void withJitter() {
     var base = Duration.ofSeconds(2);
     var strategy = BackoffStrategy.fixed(base).withJitter();
-    var context = RetryingInterceptor.Context.of(request, response, null, 0);
+    var context = RetryInterceptor.Context.of(request, response, null, 0);
     for (int i = 0; i < 100; i++) {
       var delay = strategy.backoff(context);
       assertThat(delay).isBetween(Duration.ZERO, base);
@@ -147,7 +145,7 @@ class BackoffStrategyTest {
     var base = Duration.ofSeconds(2);
     var jitterFactor = 0.5;
     var strategy = BackoffStrategy.fixed(base).withJitter(jitterFactor);
-    var context = RetryingInterceptor.Context.of(request, response, null, 0);
+    var context = RetryInterceptor.Context.of(request, response, null, 0);
     var expectedMin = Duration.ofSeconds(1);
     for (int i = 0; i < 100; i++) {
       var delay = strategy.backoff(context);
@@ -167,7 +165,7 @@ class BackoffStrategyTest {
   void retryAfterWithoutHeader() {
     var strategy = BackoffStrategy.retryAfterOr(BackoffStrategy.fixed(Duration.ofSeconds(5)));
     var responseWithoutRetryAfter = ResponseBuilder.create().request(request).build();
-    var context = RetryingInterceptor.Context.of(request, responseWithoutRetryAfter, null, 0);
+    var context = RetryInterceptor.Context.of(request, responseWithoutRetryAfter, null, 0);
     assertThat(strategy.backoff(context)).isEqualTo(Duration.ofSeconds(5));
   }
 
@@ -176,7 +174,7 @@ class BackoffStrategyTest {
     var strategy = BackoffStrategy.retryAfterOr(BackoffStrategy.fixed(Duration.ofSeconds(5)));
     var responseWithRetryAfter =
         ResponseBuilder.create().request(request).header("Retry-After", "10").build();
-    var context = RetryingInterceptor.Context.of(request, responseWithRetryAfter, null, 0);
+    var context = RetryInterceptor.Context.of(request, responseWithRetryAfter, null, 0);
     assertThat(strategy.backoff(context)).isEqualTo(Duration.ofSeconds(10));
   }
 
@@ -184,7 +182,7 @@ class BackoffStrategyTest {
   void retryAfterWithHttpDate() {
     var clock = new MockClock();
     var strategy =
-        RetryingInterceptor.retryAfterOrBackoffStrategy(
+        RetryInterceptor.retryAfterOrBackoffStrategy(
             BackoffStrategy.fixed(Duration.ofSeconds(1)), clock);
     var responseWithRetryAfter =
         ResponseBuilder.from(response)
@@ -193,7 +191,7 @@ class BackoffStrategyTest {
                 HttpDates.formatHttpDate(
                     HttpDates.toUtcDateTime(clock.instant().plus(Duration.ofSeconds(10)))))
             .build();
-    var context = RetryingInterceptor.Context.of(request, responseWithRetryAfter, null, 0);
+    var context = RetryInterceptor.Context.of(request, responseWithRetryAfter, null, 0);
     var delay = strategy.backoff(context);
     assertThat(delay).isEqualTo(Duration.ofSeconds(10));
   }
@@ -203,14 +201,14 @@ class BackoffStrategyTest {
     var strategy = BackoffStrategy.retryAfterOr(BackoffStrategy.fixed(Duration.ofSeconds(1)));
     var responseWithInvalidRetryAfter =
         ResponseBuilder.create().request(request).header("Retry-After", "invalid-value").build();
-    var context = RetryingInterceptor.Context.of(request, responseWithInvalidRetryAfter, null, 0);
+    var context = RetryInterceptor.Context.of(request, responseWithInvalidRetryAfter, null, 0);
     assertThat(strategy.backoff(context)).isEqualTo(Duration.ofSeconds(1));
   }
 
   @Test
   void retryAfterWithExceptionContext() {
     var strategy = BackoffStrategy.retryAfterOr(BackoffStrategy.fixed(Duration.ofSeconds(1)));
-    var context = RetryingInterceptor.Context.of(request, null, new RuntimeException(), 0);
+    var context = RetryInterceptor.Context.of(request, null, new RuntimeException(), 0);
     assertThat(strategy.backoff(context)).isEqualTo(Duration.ofSeconds(1));
   }
 
@@ -219,7 +217,7 @@ class BackoffStrategyTest {
     var strategy =
         BackoffStrategy.exponential(Duration.ofSeconds(1), Duration.ofSeconds(16)).withJitter(0.25);
     for (int retryCount = 0; retryCount < 5; retryCount++) {
-      var context = RetryingInterceptor.Context.of(request, response, null, retryCount);
+      var context = RetryInterceptor.Context.of(request, response, null, retryCount);
       var delay = strategy.backoff(context);
       var expectedMax = Duration.ofSeconds(1L << retryCount);
       var expectedMin = Duration.ofMillis((long) (expectedMax.toMillis() * 0.75));
@@ -230,19 +228,19 @@ class BackoffStrategyTest {
   @Test
   void linearStrategyEdgeCases() {
     var strategy = BackoffStrategy.linear(Duration.ofMillis(100), Duration.ofMillis(500));
-    assertThat(strategy.backoff(RetryingInterceptor.Context.of(request, response, null, 0)))
+    assertThat(strategy.backoff(RetryInterceptor.Context.of(request, response, null, 0)))
         .isEqualTo(Duration.ofMillis(100));
 
     assertThat(
             strategy.backoff(
-                RetryingInterceptor.Context.of(request, response, null, Integer.MAX_VALUE)))
+                RetryInterceptor.Context.of(request, response, null, Integer.MAX_VALUE)))
         .isEqualTo(Duration.ofMillis(500));
   }
 
   @Test
   void exponentialStrategyOverflow() {
     var strategy = BackoffStrategy.exponential(Duration.ofSeconds(1), Duration.ofDays(1));
-    assertThat(strategy.backoff(RetryingInterceptor.Context.of(request, response, null, 100)))
+    assertThat(strategy.backoff(RetryInterceptor.Context.of(request, response, null, 100)))
         .isEqualTo(Duration.ofDays(1));
   }
 }

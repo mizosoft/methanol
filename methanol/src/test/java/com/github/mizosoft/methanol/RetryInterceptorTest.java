@@ -54,7 +54,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 @Timeout(2)
 @ExtendWith(ExecutorExtension.class)
-class RetryingInterceptorTest {
+class RetryInterceptorTest {
   private Executor executor;
 
   @BeforeEach
@@ -83,7 +83,7 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(2)
                     .onException(TestException.class)
                     .build())
@@ -107,7 +107,7 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(2)
                     .onException(TestException.class)
                     .build())
@@ -130,7 +130,7 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(2)
                     .onException(TestException.class)
                     .build())
@@ -150,7 +150,7 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(2)
                     .onException(e -> e instanceof TestException || e instanceof IOException)
                     .build())
@@ -174,7 +174,7 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(2)
                     .onException(e -> e instanceof TestException || e instanceof IOException)
                     .build())
@@ -197,7 +197,7 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(2)
                     .onException(e -> e instanceof TestException || e instanceof IOException)
                     .build())
@@ -216,7 +216,7 @@ class RetryingInterceptorTest {
     var recordingClient = new RecordingHttpClient();
     var client =
         Methanol.newBuilder(recordingClient)
-            .interceptor(RetryingInterceptor.newBuilder().maxRetries(2).onStatus(500).build())
+            .interceptor(RetryInterceptor.newBuilder().maxRetries(2).onStatus(500).build())
             .build();
     var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
 
@@ -235,7 +235,7 @@ class RetryingInterceptorTest {
     var recordingClient = new RecordingHttpClient();
     var client =
         Methanol.newBuilder(recordingClient)
-            .interceptor(RetryingInterceptor.newBuilder().maxRetries(2).onStatus(500).build())
+            .interceptor(RetryInterceptor.newBuilder().maxRetries(2).onStatus(500).build())
             .build();
     var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
 
@@ -253,7 +253,7 @@ class RetryingInterceptorTest {
     var recordingClient = new RecordingHttpClient();
     var client =
         Methanol.newBuilder(recordingClient)
-            .interceptor(RetryingInterceptor.newBuilder().maxRetries(2).onStatus(500).build())
+            .interceptor(RetryInterceptor.newBuilder().maxRetries(2).onStatus(500).build())
             .build();
     var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
 
@@ -273,7 +273,7 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(2)
                     .onStatus(HttpStatus::isServerError)
                     .build())
@@ -296,7 +296,7 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(2)
                     .onStatus(HttpStatus::isServerError)
                     .build())
@@ -318,7 +318,7 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(2)
                     .onStatus(HttpStatus::isServerError)
                     .build())
@@ -341,7 +341,7 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(2)
                     .onResponse(r -> r.headers().map().containsKey("X-Retry"))
                     .build())
@@ -364,7 +364,7 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(2)
                     .onResponse(r -> r.headers().map().containsKey("X-Retry"))
                     .build())
@@ -387,7 +387,7 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(2)
                     .onResponse(r -> r.headers().map().containsKey("X-Retry"))
                     .build())
@@ -410,7 +410,7 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(6)
                     .onStatus(
                         HttpStatus::isServerError,
@@ -480,7 +480,7 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(2)
                     .onException(TestException.class)
                     .build(request -> request.headers().map().containsKey("X-Retry")))
@@ -510,10 +510,10 @@ class RetryingInterceptorTest {
   @ValueSource(booleans = {true, false})
   void retryConditionOrder(boolean async) {
     final class Entry {
-      final Consumer<RetryingInterceptor.Builder> spec;
+      final Consumer<RetryInterceptor.Builder> spec;
       final String expectedType;
 
-      Entry(Consumer<RetryingInterceptor.Builder> spec, String expectedType) {
+      Entry(Consumer<RetryInterceptor.Builder> spec, String expectedType) {
         this.spec = spec;
         this.expectedType = expectedType;
       }
@@ -553,7 +553,7 @@ class RetryingInterceptorTest {
                 "onResponse"))) {
       var recordingClient = new RecordingHttpClient();
       var clientBuilder = Methanol.newBuilder(recordingClient);
-      var retryingInterceptorBuilder = RetryingInterceptor.newBuilder();
+      var retryingInterceptorBuilder = RetryInterceptor.newBuilder();
       entry.spec.accept(retryingInterceptorBuilder);
       var client = clientBuilder.interceptor(retryingInterceptorBuilder.build()).build();
 
@@ -574,7 +574,7 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(1)
                     .beginWith(
                         request ->
@@ -597,11 +597,11 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(3)
                     .onStatus(500)
                     .backoff(
-                        RetryingInterceptor.BackoffStrategy.linear(
+                        RetryInterceptor.BackoffStrategy.linear(
                             Duration.ofSeconds(1), Duration.ofSeconds(10)))
                     .delayer(delayer)
                     .build())
@@ -639,7 +639,7 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(3)
                     .onStatus(500)
                     .onException(TestException.class)
@@ -671,7 +671,7 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(3)
                     .onException(TestException.class)
                     .timeout(Duration.ofSeconds(2))
@@ -713,11 +713,11 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(3)
                     .onException(TestException.class)
                     .timeout(Duration.ofSeconds(2))
-                    .backoff(RetryingInterceptor.BackoffStrategy.fixed(Duration.ofSeconds(1)))
+                    .backoff(RetryInterceptor.BackoffStrategy.fixed(Duration.ofSeconds(1)))
                     .delayer(delayer)
                     .clock(clock)
                     .build())
@@ -755,7 +755,7 @@ class RetryingInterceptorTest {
     var recordingClient = new RecordingHttpClient();
     var client =
         Methanol.newBuilder(recordingClient)
-            .interceptor(RetryingInterceptor.newBuilder().maxRetries(1).onStatus(500).build())
+            .interceptor(RetryInterceptor.newBuilder().maxRetries(1).onStatus(500).build())
             .build();
     var responseBody =
         new AutoCloseable() {
@@ -791,7 +791,7 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(2)
                     .onStatus(500)
                     .timeout(Duration.ofSeconds(1))
@@ -838,11 +838,11 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(2)
                     .onStatus(500)
                     .timeout(Duration.ofSeconds(2))
-                    .backoff(RetryingInterceptor.BackoffStrategy.fixed(Duration.ofSeconds(1)))
+                    .backoff(RetryInterceptor.BackoffStrategy.fixed(Duration.ofSeconds(1)))
                     .clock(clock)
                     .delayer(delayer)
                     .build())
@@ -886,7 +886,7 @@ class RetryingInterceptorTest {
     var client =
         Methanol.newBuilder(recordingClient)
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(2)
                     .onStatus(500)
                     .throwOnExhaustion()

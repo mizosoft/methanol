@@ -64,7 +64,7 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * <pre>{@code
  * var client = Methanol.newBuilder()
- *     .interceptor(RetryingInterceptor.newBuilder()
+ *     .interceptor(RetryInterceptor.newBuilder()
  *         .maxRetries(3)
  *         .backoff(BackoffStrategy.exponential(
  *             Duration.ofMillis(100),
@@ -77,8 +77,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  *
  * @see Builder
  */
-public final class RetryingInterceptor implements Methanol.Interceptor {
-  private static final Logger logger = System.getLogger(RetryingInterceptor.class.getName());
+public final class RetryInterceptor implements Methanol.Interceptor {
+  private static final Logger logger = System.getLogger(RetryInterceptor.class.getName());
 
   private final BiPredicate<HttpRequest, Chain<?>> selector;
   private final int maxRetries;
@@ -91,7 +91,7 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
   private final Listener listener;
   private final boolean throwOnExhaustion;
 
-  private RetryingInterceptor(BiPredicate<HttpRequest, Chain<?>> selector, Builder builder) {
+  private RetryInterceptor(BiPredicate<HttpRequest, Chain<?>> selector, Builder builder) {
     this.selector = requireNonNull(selector);
     this.maxRetries = builder.maxRetries;
     this.beginWith = builder.beginWith;
@@ -159,10 +159,10 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
               deadline);
       var action = proceed(context);
       if (action instanceof Retry) {
-        context.response().ifPresent(RetryingInterceptor::closeBodyQuietly);
+        context.response().ifPresent(RetryInterceptor::closeBodyQuietly);
         retry = (Retry) action; // Continue retrying.
       } else if (action == Timeout.INSTANCE) {
-        context.response().ifPresent(RetryingInterceptor::closeBodyQuietly);
+        context.response().ifPresent(RetryInterceptor::closeBodyQuietly);
         throw suppressing(
             context,
             new HttpRetryTimeoutException(
@@ -172,7 +172,7 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
                     + (context.retryCount() + 1)
                     + " attempts"));
       } else if (action == Exhausted.INSTANCE) {
-        context.response().ifPresent(RetryingInterceptor::closeBodyQuietly);
+        context.response().ifPresent(RetryInterceptor::closeBodyQuietly);
         throw suppressing(
             context,
             new HttpRetriesExhaustedException(
@@ -269,10 +269,10 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
     private CompletableFuture<HttpResponse<T>> handleRetry(Context<T> context) {
       var action = proceed(context);
       if (action instanceof Retry) {
-        context.response().ifPresent(RetryingInterceptor::closeBodyQuietly);
+        context.response().ifPresent(RetryInterceptor::closeBodyQuietly);
         return continueRetry(context, (Retry) action);
       } else if (action == Timeout.INSTANCE) {
-        context.response().ifPresent(RetryingInterceptor::closeBodyQuietly);
+        context.response().ifPresent(RetryInterceptor::closeBodyQuietly);
         return CompletableFuture.failedFuture(
             suppressing(
                 context,
@@ -283,7 +283,7 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
                         + (context.retryCount() + 1)
                         + " attempts")));
       } else if (action == Exhausted.INSTANCE) {
-        context.response().ifPresent(RetryingInterceptor::closeBodyQuietly);
+        context.response().ifPresent(RetryInterceptor::closeBodyQuietly);
         return CompletableFuture.failedFuture(
             suppressing(
                 context,
@@ -585,13 +585,13 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
     }
   }
 
-  /** Returns a new builder of {@code RetryingInterceptor} instances. */
+  /** Returns a new builder of {@code RetryInterceptor} instances. */
   public static Builder newBuilder() {
     return new Builder();
   }
 
   /**
-   * A listener for {@link RetryingInterceptor} events. Useful for logging, metrics collection, and
+   * A listener for {@link RetryInterceptor} events. Useful for logging, metrics collection, and
    * monitoring retry behavior.
    */
   public interface Listener {
@@ -627,7 +627,7 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
   }
 
   /**
-   * A builder of {@link RetryingInterceptor} instances.
+   * A builder of {@link RetryInterceptor} instances.
    *
    * <p><b>Note:</b> Retry conditions are evaluated in the order they are added. The first matching
    * condition determines the next request. Later conditions are not evaluated.
@@ -866,28 +866,28 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
     }
 
     /**
-     * Builds a new {@code RetryingInterceptor} that retries all requests based on the conditions
+     * Builds a new {@code RetryInterceptor} that retries all requests based on the conditions
      * specified so far.
      */
-    public RetryingInterceptor build() {
+    public RetryInterceptor build() {
       return build((__, ___) -> true);
     }
 
     /**
-     * Builds a new {@code RetryingInterceptor} that only retries requests matched by the given
+     * Builds a new {@code RetryInterceptor} that only retries requests matched by the given
      * predicate based on the conditions specified so far.
      */
-    public RetryingInterceptor build(Predicate<HttpRequest> selector) {
+    public RetryInterceptor build(Predicate<HttpRequest> selector) {
       requireNonNull(selector);
       return build((request, __) -> selector.test(request));
     }
 
     /**
-     * Builds a new {@code RetryingInterceptor} that only retries requests matched by the given
+     * Builds a new {@code RetryInterceptor} that only retries requests matched by the given
      * predicate based on the conditions specified so far.
      */
-    public RetryingInterceptor build(BiPredicate<HttpRequest, Chain<?>> selector) {
-      return new RetryingInterceptor(selector, this);
+    public RetryInterceptor build(BiPredicate<HttpRequest, Chain<?>> selector) {
+      return new RetryInterceptor(selector, this);
     }
   }
 

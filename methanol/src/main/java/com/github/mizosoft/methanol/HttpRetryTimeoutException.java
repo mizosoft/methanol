@@ -25,10 +25,9 @@ package com.github.mizosoft.methanol;
 import java.net.http.HttpTimeoutException;
 
 /**
- * Thrown when a {@link com.github.mizosoft.methanol.RetryingInterceptor} timeouts out before
- * getting a successful response.
+ * Thrown when a {@link RetryInterceptor} timeouts out before getting a successful response.
  *
- * @see RetryingInterceptor
+ * @see RetryInterceptor
  */
 public class HttpRetryTimeoutException extends HttpTimeoutException {
 

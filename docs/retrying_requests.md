@@ -31,7 +31,7 @@ var response = client.send(MutableRequest.GET("https://example.com"), BodyHandle
 
 ## Retry Behavior
 
-`RetryingInterceptor.Builder` has a number of `onX` methods to specify retry conditions. You can also set a timeout on the entire 
+`RetryingInterceptor.Builder` has a number of `onX` methods to specify retry conditions. You can also set a timeout on the entire
 retry process.
 
 ```java
@@ -58,7 +58,7 @@ If any of the conditions evaluates to true, the request is retried. Retrying goe
   2. At least one retry condition evaluates to true, but the maximum number of retries is exhausted. By default, the resulting response or thrown exception is forwarded as-is. If you never want to get a retryable response or exception, call builder's `RetryingInterceptor.Builder::throwOnExhaustion` so an `HttpRetriesExhaustedException` is thrown in this case.
   3. The total retry timeout is exceeded. An `HttpRetryTimeoutException` is thrown in this case.
 
-!!! note 
+!!! note
     Retry conditions are evaluated in declaration order. The first matching condition determines retry behavior - subsequent conditions are not evaluated.
 
 ## Request Selectors
@@ -135,7 +135,7 @@ var client =
         .build();
 ```
 
-Using this pattern, you can camouflage a `RetryingInterceptor` into a reactively authenticating interceptor. 
+Using this pattern, you can camouflage a `RetryingInterceptor` into a reactively authenticating interceptor.
 
 ```java
 // Basic Authentication with automatic credential refresh on 401.

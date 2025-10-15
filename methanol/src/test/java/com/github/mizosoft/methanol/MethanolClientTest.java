@@ -406,7 +406,7 @@ class MethanolClientTest {
     var client =
         clientBuilder
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(maxRetries)
                     .onStatus(HTTP_UNAVAILABLE)
                     .build())
@@ -433,7 +433,7 @@ class MethanolClientTest {
     var client =
         clientBuilder
             .interceptor(
-                RetryingInterceptor.newBuilder()
+                RetryInterceptor.newBuilder()
                     .maxRetries(maxRetries)
                     .onStatus(HTTP_UNAVAILABLE)
                     .build())
