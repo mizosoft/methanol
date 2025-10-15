@@ -32,6 +32,7 @@ import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.internal.util.Compare;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.IOException;
+import java.lang.System.Logger;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Clock;
@@ -77,6 +78,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
  * @see Builder
  */
 public final class RetryingInterceptor implements Methanol.Interceptor {
+  private static final Logger logger = System.getLogger(RetryingInterceptor.class.getName());
+
   private final BiPredicate<HttpRequest, Chain<?>> selector;
   private final int maxRetries;
   private final Function<HttpRequest, HttpRequest> beginWith;
@@ -156,9 +159,10 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
               deadline);
       var action = proceed(context);
       if (action instanceof Retry) {
-        // Continue retrying.
-        retry = (Retry) action;
+        context.response().ifPresent(RetryingInterceptor::closeBodyQuietly);
+        retry = (Retry) action; // Continue retrying.
       } else if (action == Timeout.INSTANCE) {
+        context.response().ifPresent(RetryingInterceptor::closeBodyQuietly);
         throw suppressing(
             context,
             new HttpRetryTimeoutException(
@@ -168,6 +172,7 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
                     + (context.retryCount() + 1)
                     + " attempts"));
       } else if (action == Exhausted.INSTANCE) {
+        context.response().ifPresent(RetryingInterceptor::closeBodyQuietly);
         throw suppressing(
             context,
             new HttpRetriesExhaustedException(
@@ -264,8 +269,10 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
     private CompletableFuture<HttpResponse<T>> handleRetry(Context<T> context) {
       var action = proceed(context);
       if (action instanceof Retry) {
+        context.response().ifPresent(RetryingInterceptor::closeBodyQuietly);
         return continueRetry(context, (Retry) action);
       } else if (action == Timeout.INSTANCE) {
+        context.response().ifPresent(RetryingInterceptor::closeBodyQuietly);
         return CompletableFuture.failedFuture(
             suppressing(
                 context,
@@ -276,6 +283,7 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
                         + (context.retryCount() + 1)
                         + " attempts")));
       } else if (action == Exhausted.INSTANCE) {
+        context.response().ifPresent(RetryingInterceptor::closeBodyQuietly);
         return CompletableFuture.failedFuture(
             suppressing(
                 context,
@@ -567,12 +575,25 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
                                                 retryDate.toInstant(ZoneOffset.UTC))))));
   }
 
+  private static void closeBodyQuietly(HttpResponse<?> response) {
+    if (response.body() instanceof AutoCloseable) {
+      try {
+        ((AutoCloseable) response.body()).close();
+      } catch (Exception e) {
+        logger.log(Logger.Level.WARNING, "Failed to close response body", e);
+      }
+    }
+  }
+
   /** Returns a new builder of {@code RetryingInterceptor} instances. */
   public static Builder newBuilder() {
     return new Builder();
   }
 
-  /** A listener for {@link RetryingInterceptor} events. */
+  /**
+   * A listener for {@link RetryingInterceptor} events. Useful for logging, metrics collection, and
+   * monitoring retry behavior.
+   */
   public interface Listener {
 
     /** Called when the interceptor is about to send the request for the first time. */
@@ -612,9 +633,9 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
    * condition determines the next request. Later conditions are not evaluated.
    */
   public static final class Builder {
-    private static final int DEFAULT_MAX_ATTEMPTS = 5;
+    private static final int DEFAULT_MAX_RETRIES = 5;
 
-    private int maxRetries = DEFAULT_MAX_ATTEMPTS;
+    private int maxRetries = DEFAULT_MAX_RETRIES;
     private Function<HttpRequest, HttpRequest> beginWith = Function.identity();
     private BackoffStrategy backoffStrategy = BackoffStrategy.none();
     private @MonotonicNonNull Duration timeout;
@@ -651,7 +672,10 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
       return this;
     }
 
-    /** Specifies the {@code BackoffStrategy} to apply every retry. */
+    /**
+     * Specifies the {@code BackoffStrategy} to apply every retry. The default {@code
+     * BackoffStrategy} is {@link BackoffStrategy#none()}.
+     */
     @CanIgnoreReturnValue
     public Builder backoff(BackoffStrategy backoffStrategy) {
       this.backoffStrategy = requireNonNull(backoffStrategy);

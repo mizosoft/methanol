@@ -37,6 +37,7 @@ import com.github.mizosoft.methanol.testing.TestException;
 import java.io.IOException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
 import java.util.List;
@@ -66,6 +67,13 @@ class RetryingInterceptorTest {
     return async
         ? client.sendAsync(request, BodyHandlers.discarding())
         : Unchecked.supplyAsync(() -> client.send(request, BodyHandlers.discarding()), executor);
+  }
+
+  <T> CompletableFuture<HttpResponse<T>> send(
+      Methanol client, HttpRequest request, BodyHandler<T> bodyHandler, boolean async) {
+    return async
+        ? client.sendAsync(request, bodyHandler)
+        : Unchecked.supplyAsync(() -> client.send(request, bodyHandler), executor);
   }
 
   @ParameterizedTest
@@ -723,7 +731,7 @@ class RetryingInterceptorTest {
     call.completeExceptionally(new TestException());
 
     assertThat(delayer.awaitingPeekLatestFuture().delay()).isEqualTo(Duration.ofSeconds(1));
-    clock.advanceSeconds(1);
+    clock.advanceSeconds(1); // Make interceptor proceed to sending.
 
     call = recordingClient.awaitCall();
     assertThat(call.request())
@@ -731,8 +739,7 @@ class RetryingInterceptorTest {
         .contains(Duration.ofSeconds(1));
     call.completeExceptionally(new TestException());
 
-    // The interceptor detects that waiting for the next retry will reach deadline so a timeout
-    // exception is thrown immediately.
+    // Interceptor detects delaying will cause timeout & fails.
     assertThat(responseFuture)
         .failsWithin(Duration.ofSeconds(1))
         .withThrowableOfType(ExecutionException.class)
@@ -740,5 +747,176 @@ class RetryingInterceptorTest {
         .isInstanceOf(HttpRetryTimeoutException.class)
         .satisfies(
             e -> assertThat(e.getSuppressed()).singleElement().isInstanceOf(TestException.class));
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retriedResponseBodyIsClosedOnRetry(boolean async) {
+    var recordingClient = new RecordingHttpClient();
+    var client =
+        Methanol.newBuilder(recordingClient)
+            .interceptor(RetryingInterceptor.newBuilder().maxRetries(1).onStatus(500).build())
+            .build();
+    var responseBody =
+        new AutoCloseable() {
+          int closures;
+
+          @Override
+          public void close() {
+            closures++;
+          }
+        };
+    var responseFuture =
+        send(
+            client,
+            MutableRequest.GET("https://example.com"),
+            BodyHandlers.replacing(responseBody),
+            async);
+
+    recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
+    recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
+
+    assertThat(responseFuture)
+        .succeedsWithin(Duration.ofSeconds(1))
+        .satisfies(r -> assertThat(r.body()).isSameAs(responseBody));
+    assertThat(responseBody.closures).isEqualTo(1);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retriedResponseBodyIsClosedOnTimeout(boolean async) {
+    var recordingClient = new RecordingHttpClient();
+    var clock = new MockClock();
+    var delayer = new MockDelayer(clock);
+    var client =
+        Methanol.newBuilder(recordingClient)
+            .interceptor(
+                RetryingInterceptor.newBuilder()
+                    .maxRetries(2)
+                    .onStatus(500)
+                    .timeout(Duration.ofSeconds(1))
+                    .clock(clock)
+                    .delayer(delayer)
+                    .build())
+            .build();
+    var responseBody =
+        new AutoCloseable() {
+          int closures;
+
+          @Override
+          public void close() {
+            closures++;
+          }
+        };
+    var responseFuture =
+        send(
+            client,
+            MutableRequest.GET("https://example.com"),
+            BodyHandlers.replacing(responseBody),
+            async);
+
+    recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
+
+    var call = recordingClient.awaitCall();
+    clock.advanceSeconds(1);
+    call.complete(builder -> builder.statusCode(500));
+
+    assertThat(responseFuture)
+        .failsWithin(Duration.ofSeconds(1))
+        .withThrowableOfType(ExecutionException.class)
+        .havingCause()
+        .isInstanceOf(HttpRetryTimeoutException.class);
+    assertThat(responseBody.closures).isEqualTo(2);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retriedResponseBodyIsClosedOnTimeoutWithBackoff(boolean async) throws InterruptedException {
+    var recordingClient = new RecordingHttpClient();
+    var clock = new MockClock();
+    var delayer = new MockDelayer(clock);
+    var client =
+        Methanol.newBuilder(recordingClient)
+            .interceptor(
+                RetryingInterceptor.newBuilder()
+                    .maxRetries(2)
+                    .onStatus(500)
+                    .timeout(Duration.ofSeconds(2))
+                    .backoff(RetryingInterceptor.BackoffStrategy.fixed(Duration.ofSeconds(1)))
+                    .clock(clock)
+                    .delayer(delayer)
+                    .build())
+            .build();
+    var responseBody =
+        new AutoCloseable() {
+          int closures;
+
+          @Override
+          public void close() {
+            closures++;
+          }
+        };
+    var responseFuture =
+        send(
+            client,
+            MutableRequest.GET("https://example.com"),
+            BodyHandlers.replacing(responseBody),
+            async);
+
+    recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
+
+    assertThat(delayer.awaitingPeekLatestFuture().delay()).isEqualTo(Duration.ofSeconds(1));
+    clock.advanceSeconds(1); // Make interceptor proceed to sending.
+
+    recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
+
+    // Interceptor detects delaying will cause timeout & fails.
+    assertThat(responseFuture)
+        .failsWithin(Duration.ofSeconds(1))
+        .withThrowableOfType(ExecutionException.class)
+        .havingCause()
+        .isInstanceOf(HttpRetryTimeoutException.class);
+    assertThat(responseBody.closures).isEqualTo(2);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retriedResponseBodyIsClosedOnExhaustion(boolean async) {
+    var recordingClient = new RecordingHttpClient();
+    var client =
+        Methanol.newBuilder(recordingClient)
+            .interceptor(
+                RetryingInterceptor.newBuilder()
+                    .maxRetries(2)
+                    .onStatus(500)
+                    .throwOnExhaustion()
+                    .build())
+            .build();
+    var responseBody =
+        new AutoCloseable() {
+          int closures;
+
+          @Override
+          public void close() {
+            closures++;
+          }
+        };
+    var responseFuture =
+        send(
+            client,
+            MutableRequest.GET("https://example.com"),
+            BodyHandlers.replacing(responseBody),
+            async);
+
+    recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
+    recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
+    recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
+
+    assertThat(responseFuture)
+        .failsWithin(Duration.ofSeconds(1))
+        .withThrowableOfType(ExecutionException.class)
+        .havingCause()
+        .isInstanceOf(HttpRetriesExhaustedException.class);
+    assertThat(responseBody.closures).isEqualTo(3);
   }
 }
