@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol;
 import static com.github.mizosoft.methanol.testing.verifiers.Verifiers.verifyThat;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.from;
+import static org.assertj.core.api.InstanceOfAssertFactories.OPTIONAL;
 
 import com.github.mizosoft.methanol.internal.function.Unchecked;
 import com.github.mizosoft.methanol.testing.ExecutorExtension;
@@ -50,7 +51,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-@Timeout(1)
+@Timeout(2)
 @ExtendWith(ExecutorExtension.class)
 class RetryingInterceptorTest {
   private Executor executor;
@@ -621,5 +622,123 @@ class RetryingInterceptorTest {
     assertThat(responseFuture)
         .succeedsWithin(Duration.ofSeconds(1))
         .returns(500, from(HttpResponse::statusCode));
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void exhaustRetries(boolean async) {
+    var recordingClient = new RecordingHttpClient();
+    var client =
+        Methanol.newBuilder(recordingClient)
+            .interceptor(
+                RetryingInterceptor.newBuilder()
+                    .maxRetries(3)
+                    .onStatus(500)
+                    .onException(TestException.class)
+                    .throwOnExhaustion()
+                    .build())
+            .build();
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
+
+    recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
+    recordingClient.awaitCall().completeExceptionally(new TestException());
+    recordingClient.awaitCall().completeExceptionally(new TestException());
+    recordingClient.awaitCall().completeExceptionally(new TestException());
+
+    assertThat(responseFuture)
+        .failsWithin(Duration.ofSeconds(1))
+        .withThrowableOfType(ExecutionException.class)
+        .havingCause()
+        .isInstanceOf(HttpRetriesExhaustedException.class)
+        .satisfies(
+            e -> assertThat(e.getSuppressed()).singleElement().isInstanceOf(TestException.class));
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryTimeout(boolean async) {
+    var recordingClient = new RecordingHttpClient();
+    var clock = new MockClock();
+    var delayer = new MockDelayer(clock);
+    var client =
+        Methanol.newBuilder(recordingClient)
+            .interceptor(
+                RetryingInterceptor.newBuilder()
+                    .maxRetries(3)
+                    .onException(TestException.class)
+                    .timeout(Duration.ofSeconds(2))
+                    .delayer(delayer)
+                    .clock(clock)
+                    .build())
+            .build();
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
+
+    var call = recordingClient.awaitCall();
+    assertThat(call.request())
+        .extracting(HttpRequest::timeout, OPTIONAL)
+        .contains(Duration.ofSeconds(2));
+    clock.advanceSeconds(1);
+    call.completeExceptionally(new TestException());
+
+    call = recordingClient.awaitCall();
+    assertThat(call.request())
+        .extracting(HttpRequest::timeout, OPTIONAL)
+        .contains(Duration.ofSeconds(1));
+    clock.advanceSeconds(1);
+    call.completeExceptionally(new TestException());
+
+    assertThat(responseFuture)
+        .failsWithin(Duration.ofSeconds(1))
+        .withThrowableOfType(ExecutionException.class)
+        .havingCause()
+        .isInstanceOf(HttpRetryTimeoutException.class)
+        .satisfies(
+            e -> assertThat(e.getSuppressed()).singleElement().isInstanceOf(TestException.class));
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryTimeoutWithBackoff(boolean async) throws InterruptedException {
+    var recordingClient = new RecordingHttpClient();
+    var clock = new MockClock();
+    var delayer = new MockDelayer(clock);
+    var client =
+        Methanol.newBuilder(recordingClient)
+            .interceptor(
+                RetryingInterceptor.newBuilder()
+                    .maxRetries(3)
+                    .onException(TestException.class)
+                    .timeout(Duration.ofSeconds(2))
+                    .backoff(RetryingInterceptor.BackoffStrategy.fixed(Duration.ofSeconds(1)))
+                    .delayer(delayer)
+                    .clock(clock)
+                    .build())
+            .build();
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
+
+    var call = recordingClient.awaitCall();
+    assertThat(call.request())
+        .extracting(HttpRequest::timeout, OPTIONAL)
+        .contains(Duration.ofSeconds(2));
+    call.completeExceptionally(new TestException());
+
+    assertThat(delayer.awaitingPeekLatestFuture().delay()).isEqualTo(Duration.ofSeconds(1));
+    clock.advanceSeconds(1);
+
+    call = recordingClient.awaitCall();
+    assertThat(call.request())
+        .extracting(HttpRequest::timeout, OPTIONAL)
+        .contains(Duration.ofSeconds(1));
+    call.completeExceptionally(new TestException());
+
+    // The interceptor detects that waiting for the next retry will reach deadline so a timeout
+    // exception is thrown immediately.
+    assertThat(responseFuture)
+        .failsWithin(Duration.ofSeconds(1))
+        .withThrowableOfType(ExecutionException.class)
+        .havingCause()
+        .isInstanceOf(HttpRetryTimeoutException.class)
+        .satisfies(
+            e -> assertThat(e.getSuppressed()).singleElement().isInstanceOf(TestException.class));
   }
 }

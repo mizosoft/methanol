@@ -108,12 +108,25 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
       return chain.forward(request);
     }
 
-    int retryCount = 0;
-    var retry = new Retry(beginWith.apply(request), Duration.ZERO);
     var deadline = timeout != null ? clock.instant().plus(timeout) : null;
+    var retry = new Retry(applyDeadline(beginWith.apply(request), deadline), Duration.ZERO);
+    Context<T> context = null;
     listener.onFirstAttempt(retry.request);
     while (true) {
       if (!retry.delay.isZero()) {
+        // If we'll reach or exceed the deadline while waiting, give up now.
+        if (deadline != null
+            && Duration.between(clock.instant(), deadline).compareTo(retry.delay) <= 0) {
+          throw suppressing(
+              context,
+              new HttpRetryTimeoutException(
+                  "Retries for "
+                      + (context != null ? context.request() : request)
+                      + " timed out after "
+                      + (context != null ? context.retryCount() + 1 : 0)
+                      + " attempts"));
+        }
+
         var delayedFuture = delayer.delay(() -> {}, retry.delay, Runnable::run);
         try {
           delayedFuture.get();
@@ -129,34 +142,39 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
       HttpResponse<T> response = null;
       Throwable exception = null;
       try {
-        response = chain.forward(retry.request);
+        response = chain.forward(applyDeadline(retry.request, deadline));
       } catch (Throwable e) {
         exception = e;
       }
 
-      var context = Context.of(request, response, exception, retryCount, deadline);
+      context =
+          Context.of(
+              request,
+              response,
+              exception,
+              context != null ? context.retryCount() + 1 : 0,
+              deadline);
       var action = proceed(context);
       if (action instanceof Retry) {
         // Continue retrying.
         retry = (Retry) action;
-        retryCount++;
       } else if (action == Timeout.INSTANCE) {
         throw suppressing(
             context,
             new HttpRetryTimeoutException(
                 "Retries for "
-                    + request
+                    + context.request()
                     + " timed out after "
-                    + context.retryCount()
+                    + (context.retryCount() + 1)
                     + " attempts"));
       } else if (action == Exhausted.INSTANCE) {
         throw suppressing(
             context,
             new HttpRetriesExhaustedException(
                 "Retries for "
-                    + request
+                    + context.request()
                     + " exhausted after "
-                    + context.retryCount()
+                    + (context.retryCount() + 1)
                     + " attempts"));
       } else if (action == Complete.INSTANCE) {
         if (response != null) {
@@ -181,7 +199,7 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
       HttpRequest request, Chain<T> chain) {
     return selector.test(request, chain)
         ? new AsyncRetrier<>(request, chain, timeout != null ? clock.instant().plus(timeout) : null)
-            .call()
+            .send()
         : chain.forwardAsync(request);
   }
 
@@ -196,7 +214,7 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
       this.deadline = deadline;
     }
 
-    CompletableFuture<HttpResponse<T>> call() {
+    CompletableFuture<HttpResponse<T>> send() {
       var modifiedRequest = beginWith.apply(request);
       listener.onFirstAttempt(modifiedRequest);
       return continueRetry(null, new Retry(modifiedRequest, Duration.ZERO));
@@ -204,17 +222,33 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
 
     private CompletableFuture<HttpResponse<T>> continueRetry(
         @Nullable Context<T> context, Retry retry) {
-      return retry.delay.isZero()
-          ? continueRetryAfterDelay(context, retry)
-          : delayer
-              .delay(() -> {}, retry.delay, Runnable::run)
-              .thenCompose(__ -> continueRetryAfterDelay(context, retry));
+      if (retry.delay.isZero()) {
+        return continueRetryAfterDelay(context, retry);
+      }
+
+      // If we'll reach or exceed the deadline while waiting, give up now.
+      if (deadline != null
+          && Duration.between(clock.instant(), deadline).compareTo(retry.delay) <= 0) {
+        return CompletableFuture.failedFuture(
+            suppressing(
+                context,
+                new HttpRetryTimeoutException(
+                    "Retries for "
+                        + (context != null ? context.request() : request)
+                        + " timed out after "
+                        + (context != null ? context.retryCount() + 1 : 0)
+                        + " attempts")));
+      }
+
+      return delayer
+          .delay(() -> {}, retry.delay, Runnable::run)
+          .thenCompose(__ -> continueRetryAfterDelay(context, retry));
     }
 
     private CompletableFuture<HttpResponse<T>> continueRetryAfterDelay(
         @Nullable Context<T> context, Retry retry) {
       return chain
-          .forwardAsync(retry.request)
+          .forwardAsync(applyDeadline(retry.request, deadline))
           .handle(
               (response, exception) ->
                   handleRetry(
@@ -239,7 +273,7 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
                     "Retries for "
                         + context.request()
                         + " timed out after "
-                        + context.retryCount()
+                        + (context.retryCount() + 1)
                         + " attempts")));
       } else if (action == Exhausted.INSTANCE) {
         return CompletableFuture.failedFuture(
@@ -249,7 +283,7 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
                     "Retries for "
                         + context.request()
                         + " exhausted after "
-                        + context.retryCount()
+                        + (context.retryCount() + 1)
                         + " attempts")));
       } else if (action == Complete.INSTANCE) {
         return context
@@ -266,8 +300,10 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
     }
   }
 
-  private static <E extends Exception> E suppressing(Context<?> context, E exception) {
-    context.exception().ifPresent(exception::addSuppressed);
+  private static <E extends Exception> E suppressing(@Nullable Context<?> context, E exception) {
+    if (context != null) {
+      context.exception().ifPresent(exception::addSuppressed);
+    }
     return exception;
   }
 
@@ -303,16 +339,14 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
     return conditions.stream()
         .map(condition -> condition.test(context))
         .flatMap(Optional::stream)
-        .findFirst()
-        .map(
-            request ->
-                context
-                    .deadline()
-                    .map(deadline -> applyDeadline(request, deadline))
-                    .orElse(request));
+        .findFirst();
   }
 
-  private HttpRequest applyDeadline(HttpRequest request, Instant deadline) {
+  private HttpRequest applyDeadline(HttpRequest request, @Nullable Instant deadline) {
+    if (deadline == null) {
+      return request;
+    }
+
     // Apply a timeout satisfying the deadline.
     var newTimeout = Duration.between(clock.instant(), deadline);
     return request.timeout().isEmpty() || newTimeout.compareTo(request.timeout().get()) < 0
@@ -723,7 +757,7 @@ public final class RetryingInterceptor implements Methanol.Interceptor {
 
     /**
      * Specifies that the interceptor is to retry the request, after applying the given request
-     * modifier, if a response that satisfies given predicate is received.
+     * modifier, if a response that satisfies the given predicate is received.
      */
     @CanIgnoreReturnValue
     public Builder onResponse(
