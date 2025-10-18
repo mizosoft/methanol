@@ -428,9 +428,8 @@ class RetryClientTest {
         .first()
         .asInstanceOf(type(FirstAttempt.class))
         .satisfies(firstAttempt -> verifyThat(firstAttempt.request).hasUri(serverUri));
-    events.removeFirst();
     assertThat(events)
-        .first()
+        .element(1)
         .asInstanceOf(type(Retry.class))
         .satisfies(
             retry -> {
@@ -440,9 +439,8 @@ class RetryClientTest {
                   .containsHeaderExactly("X-Retry", "true");
               assertThat(retry.delay).isEqualTo(Duration.ZERO);
             });
-    events.removeFirst();
     assertThat(events)
-        .first()
+        .element(2)
         .asInstanceOf(type(Complete.class))
         .satisfies(complete -> verifyThat(complete.context.request()).hasUri(serverUri));
   }
@@ -474,9 +472,8 @@ class RetryClientTest {
         .first()
         .asInstanceOf(type(FirstAttempt.class))
         .satisfies(firstAttempt -> verifyThat(firstAttempt.request).hasUri(serverUri));
-    events.removeFirst();
     assertThat(events)
-        .first()
+        .element(1)
         .asInstanceOf(type(Retry.class))
         .satisfies(
             retry -> {
@@ -486,9 +483,8 @@ class RetryClientTest {
                   .containsHeaderExactly("X-Retry", "true");
               assertThat(retry.delay).isEqualTo(Duration.ZERO);
             });
-    events.removeFirst();
     assertThat(events)
-        .first()
+        .element(2)
         .asInstanceOf(type(Exhaustion.class))
         .satisfies(complete -> verifyThat(complete.context.request()).hasUri(serverUri));
   }
@@ -521,9 +517,8 @@ class RetryClientTest {
         .first()
         .asInstanceOf(type(FirstAttempt.class))
         .satisfies(firstAttempt -> verifyThat(firstAttempt.request).hasUri(serverUri));
-    events.removeFirst();
     assertThat(events)
-        .first()
+        .element(1)
         .asInstanceOf(type(Retry.class))
         .satisfies(
             retry -> {
@@ -533,9 +528,8 @@ class RetryClientTest {
                   .containsHeaderExactly("X-Retry", "true");
               assertThat(retry.delay).isEqualTo(Duration.ofSeconds(1000));
             });
-    events.removeFirst();
     assertThat(events)
-        .first()
+        .element(2)
         .asInstanceOf(type(Timeout.class))
         .satisfies(complete -> verifyThat(complete.context.request()).hasUri(serverUri));
   }
