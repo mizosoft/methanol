@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,11 @@ import java.io.IOException
 import java.nio.file.Path
 import java.util.concurrent.Executor
 
-/** A [spec][Spec] for configuring a [Cache][com.github.mizosoft.methanol.kotlin.Cache]. */
+/**
+ * A [spec][Spec] for configuring a [Cache][com.github.mizosoft.methanol.kotlin.Cache].
+ *
+ * See [HttpCache.Builder].
+ */
 @Spec
 interface CacheSpec {
   fun onDisk(path: Path, maxSizeBytes: Long)

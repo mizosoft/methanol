@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -335,7 +335,7 @@ class TagsSpec(@PublishedApi internal val builder: TaggableRequest.Builder) {
   }
 }
 
-/** A [spec][Spec] for configuring the [hints][Hints] passed to the encoder and/or decoder. */
+/** A [spec][Spec] for configuring the [hints][Hints] passed to [adapters][AdapterCodec]. */
 @Spec
 class HintsSpec(@PublishedApi internal val builder: Hints.Builder) {
   inline operator fun <reified T> T.unaryPlus() {
@@ -396,6 +396,7 @@ fun MultipartBody(block: MultipartBodySpec.() -> Unit) =
 fun FormBody(block: FormBodySpec.() -> Unit) = FormBodyFactorySpec().apply(block).make()
 
 /** Creates a new [MultipartBodyPart][com.github.mizosoft.methanol.kotlin.MultipartBodyPart] as configured by the given spec block. */
+@Suppress("FunctionName")
 fun MultipartBodyPart(
   bodyPublisher: BodyPublisher,
   block: HeadersSpec.() -> Unit
