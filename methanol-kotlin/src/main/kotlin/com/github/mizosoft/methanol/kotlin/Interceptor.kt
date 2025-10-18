@@ -290,10 +290,13 @@ interface RetryInterceptorSpec {
   fun listener(listener: RetryListener)
 
   fun throwOnExhaustion()
+
+  fun onlyIf(block: (Request) -> Boolean)
 }
 
 private class RetryInterceptorFactorySpec : RetryInterceptorSpec, FactorySpec<Interceptor> {
   private val builder = RetryInterceptor.newBuilder()
+  private var requestSelector: (Request) -> Boolean = { true }
 
   override fun beginWith(requestModifier: (Request) -> Request) {
     builder.beginWith(requestModifier)
@@ -365,7 +368,11 @@ private class RetryInterceptorFactorySpec : RetryInterceptorSpec, FactorySpec<In
     builder.throwOnExhaustion()
   }
 
-  override fun make(): Interceptor = builder.build().toCoroutineInterceptor()
+  override fun onlyIf(block: (Request) -> Boolean) {
+    requestSelector = block
+  }
+
+  override fun make(): Interceptor = builder.build(requestSelector).toCoroutineInterceptor()
 }
 
 /**

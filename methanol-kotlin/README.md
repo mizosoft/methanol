@@ -42,11 +42,9 @@ val client = Client {
 }
 ```
 
-Here, we're configuring a [ClientSpec](https://mizosoft.github.io/methanol/api/latest/methanol.kotlin/com.github.mizosoft.methanol.kotlin/-client-spec/index.html).
-The only thing we'll configure for now is the client's [`AdapterCodec`](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/AdapterCodec.html),
+Here, we're configuring a [ClientSpec](https://mizosoft.github.io/methanol/api/latest/methanol.kotlin/com.github.mizosoft.methanol.kotlin/-client-spec/index.html). The only thing we'll configure for now is the client's [`AdapterCodec`](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/AdapterCodec.html),
 which tells it how to map high level types to & from HTTP bodies. `basic()` is good enough for, well, basic types, like `String` & `InputStream`.
-Trace through [`basicEncoder`](https://mizosoft.github.io/methanol/api/latest/methanol.kotlin/com.github.mizosoft.methanol.kotlin/-adapter-codec-spec/basic-encoder.html) & [`basicDecoder`](https://mizosoft.github.io/methanol/api/latest/methanol.kotlin/com.github.mizosoft.methanol.kotlin/-adapter-codec-spec/basic-decoder.html)
-for all the supported basic types.
+Trace through [`basicEncoder`](https://mizosoft.github.io/methanol/api/latest/methanol.kotlin/com.github.mizosoft.methanol.kotlin/-adapter-codec-spec/basic-encoder.html) & [`basicDecoder`](https://mizosoft.github.io/methanol/api/latest/methanol.kotlin/com.github.mizosoft.methanol.kotlin/-adapter-codec-spec/basic-decoder.html) for all the supported basic types.
 
 #### Get String
 
@@ -83,8 +81,7 @@ suspend fun runPost() {
 }
 ```
 
-Next to what we want to send, we pass `body` a [`MediaType`](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/MediaType.html)
-signifying the desired mapping format. This `MediaType` becomes the request's `Content-Type`.
+Next to what we want to send, we pass `body` a [`MediaType`](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/MediaType.html) signifying the desired mapping format. This `MediaType` becomes the request's `Content-Type`.
 
 Note that we specified the response body type on the left of `client.post(...)`. We could have written `val response = client.post<String>(...)`,
 but that can hurt readability since `String` in this expression is what we're getting, not what we're posting; the latter is defined by `body`. You can use either way, though.
@@ -423,8 +420,8 @@ server: gunicorn/19.9.0
 Now we can see a `User-Agent`, an `Accept-Encoding` added implicitly by the client, and the typical response headers.
 
 Client interceptors (which we added first within the `interceptors` block) see the request just as given to the client,
-and the response after the client does some changes (e.g. decompression). Backend interceptors see the request
-just before sending it, and the response just as received.
+and the response after the client does some changes (e.g. decompression). Backend interceptors see the request just before sending it,
+and the response just as received.
 
 Note that Kotlin's [`Interceptor`](https://mizosoft.github.io/methanol/api/latest/methanol.kotlin/com.github.mizosoft.methanol.kotlin/-interceptor/index.html?query=interface%20Interceptor)
 is a different interface from core library's [`Methanol.Interceptor`](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/Methanol.Interceptor.html).
@@ -432,6 +429,38 @@ This is so that Kotlin's interceptors can support coroutines; they are functiona
 You can learn more about interceptors [here](https://mizosoft.github.io/methanol/interceptors/#client-interceptors).
 
 [Runnable Example](https://github.com/mizosoft/methanol/blob/master/methanol-samples/kotlin/src/main/kotlin/com/github/mizosoft/methanol/samples/kotlin/Interceptors.kt).
+
+#### Retrying Requests
+
+Methanol provides an interceptor implementation for retrying requests based on configurable retry conditions.
+The Kotlin DSL is derived from [RetryInterceptor.Builder](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html).
+You can configure the interceptor to retry on certain exceptions, status codes, or generic response predicates. For instance, this is
+an interceptor that retries on timeouts and server errors at most 3 times, backing off exponentially on each retry.
+
+```kotlin
+val client = Client {
+  adapterCodec {
+    basic()
+  }
+  connectTimeout(5.seconds)
+  requestTimeout(10.secodns)
+  interceptors {
+    +RetryInterceptor {
+      maxRetries(5) // Default is 5
+      onException<HttpTimeoutException>()
+      onStatus(HttpStatus::isServerError)
+      backoff(BackoffStrategy.exponential(100.milliseconds, 15.seconds).withJitter())
+      onlyIf { request -> request.uri().host.startsWith("internal") } // Only retry internal hosts.
+    }
+  }
+}
+
+val response = runBlocking {
+  client.get<String>("https://internal.example.com")
+}
+```
+
+For more info, see [Retrying Requests](https://mizosoft.github.io/methanol/retrying_requests//).
 
 #### Coroutines
 
