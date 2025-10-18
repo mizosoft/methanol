@@ -40,6 +40,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -120,6 +121,9 @@ public final class RetryInterceptor implements Methanol.Interceptor {
         // If we'll reach or exceed the deadline while waiting, give up now.
         if (deadline != null
             && Duration.between(clock.instant(), deadline).compareTo(retry.delay) <= 0) {
+          if (context != null) {
+            listener.onTimeout(context);
+          }
           throw suppressing(
               context,
               new HttpRetryTimeoutException(
@@ -234,6 +238,9 @@ public final class RetryInterceptor implements Methanol.Interceptor {
       // If we'll reach or exceed the deadline while waiting, give up now.
       if (deadline != null
           && Duration.between(clock.instant(), deadline).compareTo(retry.delay) <= 0) {
+        if (context != null) {
+          listener.onTimeout(context);
+        }
         return CompletableFuture.failedFuture(
             suppressing(
                 context,
@@ -447,7 +454,7 @@ public final class RetryInterceptor implements Methanol.Interceptor {
     }
   }
 
-  /** A strategy for backing off (delaying) before a retry retries. */
+  /** A strategy for backing off (delaying) before a retry. */
   @FunctionalInterface
   public interface BackoffStrategy {
 
@@ -507,12 +514,9 @@ public final class RetryInterceptor implements Methanol.Interceptor {
      */
     static BackoffStrategy linear(Duration base, Duration cap) {
       requirePositiveDuration(base);
-      return context -> {
-        int retryCount = context.retryCount();
-        return retryCount < Integer.MAX_VALUE // Avoid overflow.
-            ? Compare.min(cap, base.multipliedBy(retryCount + 1))
-            : cap;
-      };
+      return context ->
+          Compare.min(
+              cap, base.multipliedBy(1 + Math.min(context.retryCount(), Integer.MAX_VALUE - 1)));
     }
 
     /**
@@ -528,12 +532,8 @@ public final class RetryInterceptor implements Methanol.Interceptor {
           "Base delay (%s) must be less than or equal to cap delay (%s)",
           base,
           cap);
-      return context -> {
-        int retryCount = context.retryCount();
-        return retryCount < Long.SIZE - 2 // Avoid overflow.
-            ? Compare.min(cap, base.multipliedBy(1L << context.retryCount()))
-            : cap;
-      };
+      return context ->
+          Compare.min(cap, base.multipliedBy(1L << Math.min(context.retryCount(), Long.SIZE - 2)));
     }
 
     /**
@@ -733,8 +733,12 @@ public final class RetryInterceptor implements Methanol.Interceptor {
      * status codes is received.
      */
     @CanIgnoreReturnValue
-    public Builder onStatus(Integer... codes) {
-      return onStatus(Set.of(codes), Context::request);
+    public Builder onStatus(int... codes) {
+      var codesSet = new HashSet<Integer>(codes.length);
+      for (int code : codes) {
+        codesSet.add(code);
+      }
+      return onStatus(codesSet, Context::request);
     }
 
     /**
