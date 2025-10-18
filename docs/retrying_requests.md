@@ -1,22 +1,21 @@
 # Retrying Requests
 
-Methanol provides an [Interceptor](./interceptors.md) implementation that retries requests based on declaratively
-specified conditions.
+Methanol provides an [Interceptor](./interceptors.md) implementation that retries requests based on declaratively specified conditions.
 
 ## Usage
 
-You can create [`RetryingIntercepotors`](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/RetryingInterceptor.html) by specifying conditions that trigger retries, based on the resulting response or
-exception, with varying degrees of specificity. Here's a `RetryingInterceptor` that retries `5xx` responses or `ConnectExceptions` at most 3 times (making at most 4 total attempts),
+You can create [`RetryInterceptor`](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/RetryInterceptor.html) by specifying conditions that trigger retries, based on the resulting response or
+exception, with varying degrees of specificity. Here's a `RetryInterceptor` that retries `5xx` responses or `ConnectExceptions` at most 3 times (making at most 4 total attempts),
 and backs off each retry with [exponential full-jitter](https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/) delays to not overwhelm the server.
 
 ```java
 var interceptor =
-    RetryingInterceptor.newBuilder()
+    RetryInterceptor.newBuilder()
         .maxRetries(3)
         .onException(ConnectException.class)
         .onStatus(HttpStatus::isServerError)
         .backoff(
-            RetryingInterceptor.BackoffStrategy.exponential(
+            RetryInterceptor.BackoffStrategy.exponential(
                     Duration.ofMillis(100), Duration.ofSeconds(5))
                 .withJitter())
         .build();
@@ -31,12 +30,11 @@ var response = client.send(MutableRequest.GET("https://example.com"), BodyHandle
 
 ## Retry Behavior
 
-`RetryingInterceptor.Builder` has a number of `onX` methods to specify retry conditions. You can also set a timeout on the entire
-retry process.
+`RetryInterceptor.Builder` has a number of `onX` methods to specify retry conditions. You can also set a timeout on the entire retry process.
 
 ```java
-var interceptor = 
-    RetryingInterceptor.newBuilder()
+var interceptor =
+    RetryInterceptor.newBuilder()
         .maxRetries(5)
         .onException(ConnectException.class, SSLException.class) // Retry on exception classes.
         .onException(e -> e instanceof IOException) // Retry on generic exception predicates.
@@ -55,7 +53,7 @@ var interceptor =
 
 If any of the conditions evaluates to true, the request is retried. Retrying goes on until any of the following happens:
   1. None of the specified conditions evaluate to true. The resulting response or thrown exception is forwarded as-is, which is what you want.
-  2. At least one retry condition evaluates to true, but the maximum number of retries is exhausted. By default, the resulting response or thrown exception is forwarded as-is. If you never want to get a retryable response or exception, call builder's `RetryingInterceptor.Builder::throwOnExhaustion` so an `HttpRetriesExhaustedException` is thrown in this case.
+  2. At least one retry condition evaluates to true, but the maximum number of retries is exhausted. By default, the resulting response or thrown exception is forwarded as-is. If you never want to get a retryable response or exception, call builder's `RetryInterceptor.Builder::throwOnExhaustion` so an `HttpRetriesExhaustedException` is thrown in this case.
   3. The total retry timeout is exceeded. An `HttpRetryTimeoutException` is thrown in this case.
 
 !!! note
@@ -65,13 +63,13 @@ If any of the conditions evaluates to true, the request is retried. Retrying goe
 
 It is a good practice to share HTTP client instances when talking to different endpoints. If that's the case, you might want to apply
 different retry strategies for each endpoint, or only retry on certain endpoints. You can use request selectors for filtering what requests
-to apply a certain `RetryingInterceptor` to.
+to apply a certain `RetryInterceptor` to.
 
 ```java
 var client =
     Methanol.newBuilder()
         .interceptor(
-            RetryingInterceptor.newBuilder()
+            RetryInterceptor.newBuilder()
                 .maxRetries(10)
                 .onException(ConnectException.class)
                 .onStatus(HttpStatus::isServerError)
@@ -91,7 +89,7 @@ class RetryRequestTag {}
 var client =
     Methanol.newBuilder()
         .interceptor(
-            RetryingInterceptor.newBuilder()
+            RetryInterceptor.newBuilder()
                 .maxRetries(5)
                 .onException(ConnectException.class)
                 .onStatus(HttpStatus::isServerError)
@@ -117,7 +115,7 @@ This can be useful if you want to attach debug headers to each request.
 var client =
     Methanol.newBuilder()
         .interceptor(
-            RetryingInterceptor.newBuilder()
+            RetryInterceptor.newBuilder()
                 .beginWith(request -> MutableRequest.copyOf(request).header("X-Attempt", "1")) // Modifies request before FIRST attempt (not retries)
                 .onException(
                     Set.of(ConnectException.class),
@@ -135,13 +133,13 @@ var client =
         .build();
 ```
 
-Using this pattern, you can camouflage a `RetryingInterceptor` into a reactively authenticating interceptor.
+Using this pattern, you can camouflage a `RetryInterceptor` into a reactively authenticating interceptor.
 
 ```java
 // Basic Authentication with automatic credential refresh on 401.
 var clientWithAuth = Methanol.newBuilder()
     .interceptor(
-        RetryingInterceptor.newBuilder()
+        RetryInterceptor.newBuilder()
             .maxRetries(2)
             .beginWith(request ->
                 MutableRequest.copyOf(request)
@@ -173,17 +171,17 @@ private Credentials refreshCredentials() {
 
 ## Monitoring Retries
 
-For debugging/monitoring purposes, you can apply a [RetryingInterceptor.Listener](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/RetryingInterceptor.Listener.html) to receive retry events.
+For debugging/monitoring purposes, you can apply a [RetryInterceptor.Listener](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/RetryInterceptor.Listener.html) to receive retry events.
 
 ```java
-var interceptor = RetryingInterceptor.newBuilder()
+var interceptor = RetryInterceptor.newBuilder()
     .maxRetries(5)
     .onException(ConnectException.class)
     .onStatus(HttpStatus::isServerError)
     .backoff(BackoffStrategy.exponential(Duration.ofMillis(100), Duration.ofSeconds(10)))
-    .listener(new RetryingInterceptor.Listener() {
+    .listener(new RetryInterceptor.Listener() {
       @Override
-      public void onRetry(RetryingInterceptor.Context<?> context, HttpRequest nextRequest, Duration delay) {
+      public void onRetry(RetryInterceptor.Context<?> context, HttpRequest nextRequest, Duration delay) {
         System.out.println("Retrying request " + nextRequest + " in " + delay);
       }
     })
