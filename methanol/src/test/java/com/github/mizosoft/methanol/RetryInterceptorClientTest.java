@@ -44,7 +44,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith(MockWebServerExtension.class)
-class RetryClientTest {
+class RetryInterceptorClientTest {
   private MockWebServer server;
   private URI serverUri;
 

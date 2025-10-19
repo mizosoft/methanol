@@ -113,7 +113,7 @@ public final class RetryInterceptor implements Methanol.Interceptor {
     }
 
     var deadline = timeout != null ? clock.instant().plus(timeout) : null;
-    var retry = new Retry(applyDeadline(beginWith.apply(request), deadline), Duration.ZERO);
+    var retry = new Retry(beginWith.apply(request), Duration.ZERO);
     Context<T> context = null;
     listener.onFirstAttempt(retry.request);
     while (true) {
@@ -146,10 +146,26 @@ public final class RetryInterceptor implements Methanol.Interceptor {
         }
       }
 
+      Duration requestTimeout = null;
+      if (deadline != null) {
+        var now = clock.instant();
+        if (!now.isBefore(deadline)) {
+          throw suppressing(
+              context,
+              new HttpRetryTimeoutException(
+                  "Retries for "
+                      + (context != null ? context.request() : request)
+                      + " timed out after "
+                      + (context != null ? context.retryCount() + 1 : 0)
+                      + " attempts"));
+        }
+        requestTimeout = Duration.between(now, deadline);
+      }
+
       HttpResponse<T> response = null;
       Throwable exception = null;
       try {
-        response = chain.forward(applyDeadline(retry.request, deadline));
+        response = chain.forward(applyTimeout(retry.request, requestTimeout));
       } catch (Throwable e) {
         exception = e;
       }
@@ -259,8 +275,24 @@ public final class RetryInterceptor implements Methanol.Interceptor {
 
     private CompletableFuture<HttpResponse<T>> continueRetryAfterDelay(
         @Nullable Context<T> context, Retry retry) {
+      Duration requestTimeout = null;
+      if (deadline != null) {
+        var now = clock.instant();
+        if (!now.isBefore(deadline)) {
+          return CompletableFuture.failedFuture(
+              suppressing(
+                  context,
+                  new HttpRetryTimeoutException(
+                      "Retries for "
+                          + (context != null ? context.request() : request)
+                          + " timed out after "
+                          + (context != null ? context.retryCount() + 1 : 0)
+                          + " attempts")));
+        }
+        requestTimeout = Duration.between(now, deadline);
+      }
       return chain
-          .forwardAsync(applyDeadline(retry.request, deadline))
+          .forwardAsync(applyTimeout(retry.request, requestTimeout))
           .handle(
               (response, exception) ->
                   handleRetry(
@@ -357,15 +389,10 @@ public final class RetryInterceptor implements Methanol.Interceptor {
         .findFirst();
   }
 
-  private HttpRequest applyDeadline(HttpRequest request, @Nullable Instant deadline) {
-    if (deadline == null) {
-      return request;
-    }
-
-    // Apply a timeout satisfying the deadline.
-    var newTimeout = Duration.between(clock.instant(), deadline);
-    return request.timeout().isEmpty() || newTimeout.compareTo(request.timeout().get()) < 0
-        ? MutableRequest.copyOf(request).timeout(newTimeout).build()
+  private HttpRequest applyTimeout(HttpRequest request, @Nullable Duration timeout) {
+    return timeout != null
+            && (request.timeout().isEmpty() || timeout.compareTo(request.timeout().get()) < 0)
+        ? MutableRequest.copyOf(request).timeout(timeout).toImmutableRequest()
         : request;
   }
 
