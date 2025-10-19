@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.lang.System.Logger;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -121,17 +122,7 @@ public final class RetryInterceptor implements Methanol.Interceptor {
         // If we'll reach or exceed the deadline while waiting, give up now.
         if (deadline != null
             && Duration.between(clock.instant(), deadline).compareTo(retry.delay) <= 0) {
-          if (context != null) {
-            listener.onTimeout(context);
-          }
-          throw suppressing(
-              context,
-              new HttpRetryTimeoutException(
-                  "Retries for "
-                      + (context != null ? context.request() : request)
-                      + " timed out after "
-                      + (context != null ? context.retryCount() + 1 : 0)
-                      + " attempts"));
+          throw timeout(request, context);
         }
 
         var delayedFuture = delayer.delay(() -> {}, retry.delay, Runnable::run);
@@ -150,14 +141,7 @@ public final class RetryInterceptor implements Methanol.Interceptor {
       if (deadline != null) {
         var now = clock.instant();
         if (!now.isBefore(deadline)) {
-          throw suppressing(
-              context,
-              new HttpRetryTimeoutException(
-                  "Retries for "
-                      + (context != null ? context.request() : request)
-                      + " timed out after "
-                      + (context != null ? context.retryCount() + 1 : 0)
-                      + " attempts"));
+          throw timeout(request, context);
         }
         requestTimeout = Duration.between(now, deadline);
       }
@@ -183,14 +167,7 @@ public final class RetryInterceptor implements Methanol.Interceptor {
         retry = (Retry) action; // Continue retrying.
       } else if (action == Timeout.INSTANCE) {
         context.response().ifPresent(RetryInterceptor::closeBodyQuietly);
-        throw suppressing(
-            context,
-            new HttpRetryTimeoutException(
-                "Retries for "
-                    + context.request()
-                    + " timed out after "
-                    + (context.retryCount() + 1)
-                    + " attempts"));
+        throw timeout(request, context);
       } else if (action == Exhausted.INSTANCE) {
         context.response().ifPresent(RetryInterceptor::closeBodyQuietly);
         throw suppressing(
@@ -228,6 +205,38 @@ public final class RetryInterceptor implements Methanol.Interceptor {
         : chain.forwardAsync(request);
   }
 
+  private static void closeBodyQuietly(HttpResponse<?> response) {
+    if (response.body() instanceof AutoCloseable) {
+      try {
+        ((AutoCloseable) response.body()).close();
+      } catch (Exception e) {
+        logger.log(Logger.Level.WARNING, "Failed to close response body", e);
+      }
+    }
+  }
+
+  private HttpTimeoutException timeout(HttpRequest initialRequest, @Nullable Context<?> context) {
+    var exception =
+        new HttpTimeoutException(
+            "Retries for "
+                + (context != null ? context.request() : initialRequest)
+                + " timed out after "
+                + (context != null ? context.retryCount() + 1 : 0)
+                + " attempts");
+    if (context != null) {
+      context.exception().ifPresent(exception::addSuppressed);
+      listener.onComplete(Context.of(context.request(), null, exception, context.retryCount()));
+    } else {
+      listener.onComplete(Context.of(initialRequest, null, exception, 0));
+    }
+    return exception;
+  }
+
+  /** Returns a new builder of {@code RetryInterceptor} instances. */
+  public static Builder newBuilder() {
+    return new Builder();
+  }
+
   private final class AsyncRetrier<T> {
     private final HttpRequest request;
     private final Chain<T> chain;
@@ -254,18 +263,7 @@ public final class RetryInterceptor implements Methanol.Interceptor {
       // If we'll reach or exceed the deadline while waiting, give up now.
       if (deadline != null
           && Duration.between(clock.instant(), deadline).compareTo(retry.delay) <= 0) {
-        if (context != null) {
-          listener.onTimeout(context);
-        }
-        return CompletableFuture.failedFuture(
-            suppressing(
-                context,
-                new HttpRetryTimeoutException(
-                    "Retries for "
-                        + (context != null ? context.request() : request)
-                        + " timed out after "
-                        + (context != null ? context.retryCount() + 1 : 0)
-                        + " attempts")));
+        return CompletableFuture.failedFuture(timeout(request, context));
       }
 
       return delayer
@@ -279,15 +277,7 @@ public final class RetryInterceptor implements Methanol.Interceptor {
       if (deadline != null) {
         var now = clock.instant();
         if (!now.isBefore(deadline)) {
-          return CompletableFuture.failedFuture(
-              suppressing(
-                  context,
-                  new HttpRetryTimeoutException(
-                      "Retries for "
-                          + (context != null ? context.request() : request)
-                          + " timed out after "
-                          + (context != null ? context.retryCount() + 1 : 0)
-                          + " attempts")));
+          return CompletableFuture.failedFuture(timeout(request, context));
         }
         requestTimeout = Duration.between(now, deadline);
       }
@@ -312,15 +302,7 @@ public final class RetryInterceptor implements Methanol.Interceptor {
         return continueRetry(context, (Retry) action);
       } else if (action == Timeout.INSTANCE) {
         context.response().ifPresent(RetryInterceptor::closeBodyQuietly);
-        return CompletableFuture.failedFuture(
-            suppressing(
-                context,
-                new HttpRetryTimeoutException(
-                    "Retries for "
-                        + context.request()
-                        + " timed out after "
-                        + (context.retryCount() + 1)
-                        + " attempts")));
+        return CompletableFuture.failedFuture(timeout(request, context));
       } else if (action == Exhausted.INSTANCE) {
         context.response().ifPresent(RetryInterceptor::closeBodyQuietly);
         return CompletableFuture.failedFuture(
@@ -356,8 +338,7 @@ public final class RetryInterceptor implements Methanol.Interceptor {
 
   private RetryAction proceed(Context<?> context) {
     if (context.deadline().isPresent() && !clock.instant().isBefore(context.deadline().get())) {
-      listener.onTimeout(context);
-      return Timeout.INSTANCE;
+      return Timeout.INSTANCE; // Listener will be called by timeout().
     } else if (context.retryCount() >= maxRetries) {
       if (throwOnExhaustion) {
         listener.onExhaustion(context);
@@ -447,7 +428,7 @@ public final class RetryInterceptor implements Methanol.Interceptor {
     /**
      * Returns an {@code Optional} specifying the deadline for retrying, specified according to
      * {@link Builder#timeout(Duration)}. If the given deadline is exceeded before a non-retryable
-     * response or exception is received, a {@link HttpRetryTimeoutException} is thrown.
+     * response or exception is received, a {@link HttpTimeoutException} is thrown.
      */
     Optional<Instant> deadline();
 
@@ -602,21 +583,6 @@ public final class RetryInterceptor implements Methanol.Interceptor {
                                                 retryDate.toInstant(ZoneOffset.UTC))))));
   }
 
-  private static void closeBodyQuietly(HttpResponse<?> response) {
-    if (response.body() instanceof AutoCloseable) {
-      try {
-        ((AutoCloseable) response.body()).close();
-      } catch (Exception e) {
-        logger.log(Logger.Level.WARNING, "Failed to close response body", e);
-      }
-    }
-  }
-
-  /** Returns a new builder of {@code RetryInterceptor} instances. */
-  public static Builder newBuilder() {
-    return new Builder();
-  }
-
   /**
    * A listener for {@link RetryInterceptor} events. Useful for logging, metrics collection, and
    * monitoring retry behavior.
@@ -638,9 +604,6 @@ public final class RetryInterceptor implements Methanol.Interceptor {
      * condition matches.
      */
     default void onComplete(Context<?> context) {}
-
-    /** Called when the interceptor times out before getting a returnable result. */
-    default void onTimeout(Context<?> context) {}
 
     /**
      * Called when the interceptor exhausts allowed retry attempts. The given context's {@link
@@ -846,8 +809,8 @@ public final class RetryInterceptor implements Methanol.Interceptor {
 
     /**
      * Sets a timeout for the entire retry process. If the timeout is exceeded before receiving a
-     * non-retryable response or exception, an {@link HttpRetryTimeoutException} is thrown with the
-     * last exception (if any) as a suppressed exception.
+     * non-retryable response or exception, an {@link HttpTimeoutException} is thrown with the last
+     * exception (if any) as a suppressed exception.
      *
      * <p>The timeout applies from the start of the first attempt until either:
      *

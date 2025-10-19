@@ -39,6 +39,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
@@ -699,7 +700,7 @@ class RetryInterceptorTest {
         .failsWithin(Duration.ofSeconds(1))
         .withThrowableOfType(ExecutionException.class)
         .havingCause()
-        .isInstanceOf(HttpRetryTimeoutException.class)
+        .isInstanceOf(HttpTimeoutException.class)
         .satisfies(
             e -> assertThat(e.getSuppressed()).singleElement().isInstanceOf(TestException.class));
   }
@@ -744,7 +745,7 @@ class RetryInterceptorTest {
         .failsWithin(Duration.ofSeconds(1))
         .withThrowableOfType(ExecutionException.class)
         .havingCause()
-        .isInstanceOf(HttpRetryTimeoutException.class)
+        .isInstanceOf(HttpTimeoutException.class)
         .satisfies(
             e -> assertThat(e.getSuppressed()).singleElement().isInstanceOf(TestException.class));
   }
@@ -825,7 +826,7 @@ class RetryInterceptorTest {
         .failsWithin(Duration.ofSeconds(1))
         .withThrowableOfType(ExecutionException.class)
         .havingCause()
-        .isInstanceOf(HttpRetryTimeoutException.class);
+        .isInstanceOf(HttpTimeoutException.class);
     assertThat(responseBody.closures).isEqualTo(2);
   }
 
@@ -875,7 +876,7 @@ class RetryInterceptorTest {
         .failsWithin(Duration.ofSeconds(1))
         .withThrowableOfType(ExecutionException.class)
         .havingCause()
-        .isInstanceOf(HttpRetryTimeoutException.class);
+        .isInstanceOf(HttpTimeoutException.class);
     assertThat(responseBody.closures).isEqualTo(2);
   }
 

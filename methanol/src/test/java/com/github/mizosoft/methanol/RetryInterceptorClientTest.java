@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -326,14 +327,6 @@ class RetryInterceptorClientTest {
     }
   }
 
-  private static final class Timeout implements RetryEvent {
-    final RetryInterceptor.Context<?> context;
-
-    Timeout(RetryInterceptor.Context<?> context) {
-      this.context = context;
-    }
-  }
-
   private static final class Complete implements RetryEvent {
     final RetryInterceptor.Context<?> context;
 
@@ -369,8 +362,10 @@ class RetryInterceptorClientTest {
     server.enqueue(new MockResponse.Builder().code(500).build());
     server.enqueue(new MockResponse.Builder().code(500).build());
 
+    // An HttpTimeoutException will be thrown, which can be an HttpRetriesTimeoutException depending
+    // on when timeout is detected.
     assertThatThrownBy(() -> client.send(MutableRequest.GET(serverUri), BodyHandlers.ofString()))
-        .isInstanceOf(HttpRetryTimeoutException.class);
+        .isInstanceOf(HttpTimeoutException.class);
   }
 
   static RetryInterceptor.Listener listenerFor(List<RetryEvent> events) {
@@ -389,11 +384,6 @@ class RetryInterceptorClientTest {
       @Override
       public void onComplete(RetryInterceptor.Context<?> context) {
         events.add(new Complete(context));
-      }
-
-      @Override
-      public void onTimeout(RetryInterceptor.Context<?> context) {
-        events.add(new Timeout(context));
       }
 
       @Override
@@ -511,7 +501,7 @@ class RetryInterceptorClientTest {
     server.enqueue(new MockResponse.Builder().code(500).build());
 
     assertThatThrownBy(() -> client.send(MutableRequest.GET(serverUri), BodyHandlers.ofString()))
-        .isInstanceOf(HttpRetryTimeoutException.class);
+        .isInstanceOf(HttpTimeoutException.class);
 
     assertThat(events)
         .first()
@@ -530,7 +520,12 @@ class RetryInterceptorClientTest {
             });
     assertThat(events)
         .element(2)
-        .asInstanceOf(type(Timeout.class))
-        .satisfies(complete -> verifyThat(complete.context.request()).hasUri(serverUri));
+        .asInstanceOf(type(Complete.class))
+        .satisfies(
+            complete -> {
+              verifyThat(complete.context.request()).hasUri(serverUri);
+              assertThat(complete.context.exception())
+                  .hasValueSatisfying(e -> assertThat(e).isInstanceOf(HttpTimeoutException.class));
+            });
   }
 }

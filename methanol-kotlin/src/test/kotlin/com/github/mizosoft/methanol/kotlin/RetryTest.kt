@@ -28,7 +28,6 @@ import assertk.assertions.first
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import com.github.mizosoft.methanol.HttpRetriesExhaustedException
-import com.github.mizosoft.methanol.HttpRetryTimeoutException
 import com.github.mizosoft.methanol.HttpStatus
 import com.github.mizosoft.methanol.testing.MockWebServerExtension
 import com.github.mizosoft.methanol.testing.TestUtils
@@ -38,6 +37,7 @@ import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import java.net.http.HttpTimeoutException
 import java.util.zip.ZipException
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.nanoseconds
@@ -481,7 +481,7 @@ class RetryTest(private val server: MockWebServer) {
       runBlocking {
         client.get<String>(serverUri)
       }
-    }.isInstanceOf(HttpRetryTimeoutException::class.java)
+    }.isInstanceOf(HttpTimeoutException::class.java)
   }
 
   private sealed interface RetryEvent
@@ -489,8 +489,6 @@ class RetryTest(private val server: MockWebServer) {
   private class FirstAttempt(val request: Request) : RetryEvent
 
   private class Retry(val context: RetryContext<*>, val nextRequest: Request, val delay: Duration) : RetryEvent
-
-  private class Timeout(val context: RetryContext<*>) : RetryEvent
 
   private class Complete(val context: RetryContext<*>) : RetryEvent
 
@@ -502,9 +500,6 @@ class RetryTest(private val server: MockWebServer) {
     }
     onRetry { ctx, nextRequest, delay ->
       add(Retry(ctx, nextRequest, delay))
-    }
-    onTimeout {
-      add(Timeout(it))
     }
     onExhaustion {
       add(Exhaustion(it))
@@ -637,7 +632,7 @@ class RetryTest(private val server: MockWebServer) {
       runBlocking {
         client.get<String>(serverUri)
       }
-    }.isInstanceOf(HttpRetryTimeoutException::class.java)
+    }.isInstanceOf(HttpTimeoutException::class.java)
 
     assertThat(events).first().isInstanceOf(FirstAttempt::class).given { firstAttempt ->
       verifyThat(firstAttempt.request).hasUri(serverUri)
@@ -649,8 +644,9 @@ class RetryTest(private val server: MockWebServer) {
       assertThat(retry.delay).isEqualTo(1000.seconds)
     }
     events.removeFirst()
-    assertThat(events).first().isInstanceOf(Timeout::class).given { timeout ->
-      verifyThat(timeout.context.request()).hasUri(serverUri)
+    assertThat(events).first().isInstanceOf(Complete::class).given { complete ->
+      verifyThat(complete.context.request()).hasUri(serverUri)
+      assertThat(complete.context.exception().orElse(null)).isInstanceOf(HttpTimeoutException::class.java)
     }
   }
 }

@@ -183,8 +183,6 @@ interface RetryListenerSpec {
 
   fun onRetry(callback: (RetryContext<*>, nextRequest: Request, delay: Duration) -> Unit)
 
-  fun onTimeout(callback: (RetryContext<*>) -> Unit)
-
   fun onExhaustion(callback: (RetryContext<*>) -> Unit)
 
   fun onComplete(callback: (RetryContext<*>) -> Unit)
@@ -193,7 +191,6 @@ interface RetryListenerSpec {
 private class RetryListenerFactorySpec : RetryListenerSpec, FactorySpec<RetryListener> {
   private var onFirstAttempt: (Request) -> Unit = {}
   private var onRetry: (RetryContext<*>, Request, Duration) -> Unit = { _, _, _ -> }
-  private var onTimeout: (RetryContext<*>) -> Unit = {}
   private var onExhaustion: (RetryContext<*>) -> Unit = {}
   private var onComplete: (RetryContext<*>) -> Unit = {}
 
@@ -203,10 +200,6 @@ private class RetryListenerFactorySpec : RetryListenerSpec, FactorySpec<RetryLis
 
   override fun onRetry(callback: (RetryContext<*>, Request, Duration) -> Unit) {
     onRetry = callback
-  }
-
-  override fun onTimeout(callback: (RetryContext<*>) -> Unit) {
-    onTimeout = callback
   }
 
   override fun onExhaustion(callback: (RetryContext<*>) -> Unit) {
@@ -221,7 +214,6 @@ private class RetryListenerFactorySpec : RetryListenerSpec, FactorySpec<RetryLis
     return object : RetryListener {
       val onFirstAttemptCallback = this@RetryListenerFactorySpec.onFirstAttempt
       val onRetryCallback = this@RetryListenerFactorySpec.onRetry
-      val onTimeoutCallback = this@RetryListenerFactorySpec.onTimeout
       val onExhaustionCallback = this@RetryListenerFactorySpec.onExhaustion
       val onCompleteCallback = this@RetryListenerFactorySpec.onComplete
 
@@ -230,8 +222,6 @@ private class RetryListenerFactorySpec : RetryListenerSpec, FactorySpec<RetryLis
       override fun onRetry(
         context: RetryInterceptor.Context<*>, nextRequest: HttpRequest, delay: java.time.Duration
       ) = onRetryCallback(context, nextRequest, delay.toKotlinDuration())
-
-      override fun onTimeout(context: RetryContext<*>) = onTimeoutCallback(context)
 
       override fun onExhaustion(context: RetryContext<*>) = onExhaustionCallback(context)
 
