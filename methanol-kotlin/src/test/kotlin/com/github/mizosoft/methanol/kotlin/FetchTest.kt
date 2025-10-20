@@ -248,7 +248,6 @@ class FetchTest(private val server: MockWebServer) {
     }
   }
 
-
   @Test
   fun fetchPutWithBodyPublisherAndBodyHandler() {
     val client = Client {}

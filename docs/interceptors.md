@@ -69,11 +69,15 @@ var expectContinueInterceptor = Interceptor.create(request ->
         : request);
 ```
 
+## Retrying Requests
+
+See [Retrying Requests](retrying_requests.md).
+
 ## Intercepting Bodies
 
 A powerful property of interceptors is their control over how responses are received by their caller.
 An interceptor can transform its chain's `BodyHandler` before it forwards requests.
-A transformed `BodyHandler` typically applies the handler the chain previously had, then wraps the resulted `BodySubscriber`, so it intercepts the response body as it's being received by the caller.
+A transformed `BodyHandler` typically applies the handler the chain previously had, then wraps the resulting `BodySubscriber`, so it intercepts the response body as it's being received by the caller.
 This is how `Methanol` does transparent decompression & cache writes.
 
 Note that this applies to requests too. You can transform a request body by wrapping its `BodyPublisher`.

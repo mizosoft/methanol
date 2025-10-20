@@ -227,7 +227,7 @@ public interface BodyAdapter {
   }
 
   /**
-   * A collections of hints that provide additional context to customize an adapter's
+   * A collection of hints that provide additional context to customize an adapter's
    * encoding/decoding behavior. Typically, an adapter receives a {@code Hints} object that contains
    * the {@link MediaType} of the intended format as advertised by the request or response.
    * Additionally, an encoder receives a {@code Hints} objects containing the {@link #request()},

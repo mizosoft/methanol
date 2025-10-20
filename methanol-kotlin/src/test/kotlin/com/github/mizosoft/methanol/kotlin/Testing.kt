@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,6 +23,7 @@
 package com.github.mizosoft.methanol.kotlin
 
 import com.github.mizosoft.methanol.testing.ByteBufferCollector
+import com.github.mizosoft.methanol.testing.TestUtils
 import com.github.mizosoft.methanol.testing.verifiers.DecoderVerifier
 import kotlinx.serialization.Serializable
 import java.net.http.HttpRequest.BodyPublisher
@@ -34,3 +35,5 @@ inline fun <reified T> DecoderVerifier.converting() = converting(TypeRef<T>())
 
 @Serializable
 data class Point(val x: Int, val y: Int)
+
+fun String.gzipped(): ByteArray = TestUtils.gzip(this)

@@ -117,6 +117,8 @@ public final class CancellationPropagatingFuture<T> extends CompletableFuture<T>
   }
 
   public static <T> CancellationPropagatingFuture<T> create() {
+    // Make sure the created future is cancelled if any child of it is cancelled. The weird case
+    // where the future propagates cancellation to itself is OK since cancellation is idempotent.
     var future = new CancellationPropagatingFuture<T>();
     future.propagateCancellationTo(future::cancel);
     return future;

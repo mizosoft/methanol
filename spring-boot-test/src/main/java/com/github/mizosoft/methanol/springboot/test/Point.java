@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,38 +22,4 @@
 
 package com.github.mizosoft.methanol.springboot.test;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import java.util.Objects;
-import org.checkerframework.checker.nullness.qual.Nullable;
-
-public final class Point {
-  public final int x;
-  public final int y;
-
-  @JsonCreator
-  public Point(@JsonProperty("x") int x, @JsonProperty("y") int y) {
-    this.x = x;
-    this.y = y;
-  }
-
-  @Override
-  public boolean equals(@Nullable Object obj) {
-    if (!(obj instanceof Point)) {
-      return false;
-    }
-
-    var other = (Point) obj;
-    return x == other.x && y == other.y;
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(x, y);
-  }
-
-  @Override
-  public String toString() {
-    return "Point[x=" + x + ", y=" + y + "]";
-  }
-}
+public record Point(int x, int y) {}

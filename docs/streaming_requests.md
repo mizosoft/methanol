@@ -12,8 +12,11 @@ HttpResponse<Void> postGzipped(Path file) {
   return client.send(
       MutableRequest.POST(
               "https://example.com",
-              MoreBodyPublishers.ofOutputStream(
-                  out -> Files.copy(file, out), executor))
+              MoreBodyPublishers.ofOutputStream(out -> {
+                try (var gzipOut = new GZIPOutputStream(out)) {
+                  Files.copy(file, gzipOut);
+                }
+              }, executor))
           .header("Content-Encoding", "gzip"),
       BodyHandlers.discarding());
 }

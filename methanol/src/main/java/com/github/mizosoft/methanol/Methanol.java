@@ -668,7 +668,7 @@ public class Methanol extends HttpClient {
       }
 
       /**
-       * Forwards the request to the next interceptor, or to the client's backend if called by the
+       * Forwards the request to the next interceptor or to the client's backend if called by the
        * last interceptor.
        */
       HttpResponse<T> forward(HttpRequest request) throws IOException, InterruptedException;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,6 @@ import java.net.http.HttpHeaders
 /** A [spec][Spec] for configuring [Headers][com.github.mizosoft.methanol.kotlin.Headers]. */
 @Spec
 interface HeadersSpec : StringNameMultiStringValueSpec {
-
   /** Sets the header with this name to the given value. */
   infix fun String.onlyTo(value: String)
 

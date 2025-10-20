@@ -26,7 +26,8 @@ This method takes your desired `BodyHandler` and gives you one that decompresses
 var response = client.send(request, MoreBodyHandlers.decoding(BodyHandlers.ofString()));
 ```
 
-It doesn't matter which `BodyHandler` you're using; you can have whatever response body type you want.
+It doesn't matter which `BodyHandler` you're using; you can have whatever response body type you want. `Methanol` applies this handler
+automatically to your response.
 
 ## BodyDecoder
 

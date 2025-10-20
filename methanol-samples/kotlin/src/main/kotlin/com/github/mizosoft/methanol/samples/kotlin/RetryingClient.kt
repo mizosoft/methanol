@@ -20,25 +20,37 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.concurrent;
+package com.github.mizosoft.methanol.samples.kotlin
 
-import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ScheduledExecutorService;
+import com.github.mizosoft.methanol.HttpStatus
+import com.github.mizosoft.methanol.kotlin.*
+import java.net.ConnectException
+import java.net.http.HttpTimeoutException
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
-/** Delays the execution of a given task. */
-public interface Delayer {
+object RetryingClient {
+  val client = Client {
+    adapterCodec {
+      basic()
+    }
+    connectTimeout(5.seconds)
+    requestTimeout(10.seconds)
+    interceptors {
+      +RetryInterceptor {
+        maxRetries(5) // Default is 5
+        onException<ConnectException, HttpTimeoutException>()
+        onStatus(HttpStatus::isServerError)
+        backoff(BackoffStrategy.exponential(100.milliseconds, 15.seconds).withJitter())
 
-  /** Arranges for the task to be submitted to the given executor after the delay is evaluated. */
-  CompletableFuture<Void> delay(Runnable task, Duration delay, Executor executor);
-
-  /** A Delayer that uses a library-wide scheduler. */
-  static Delayer defaultDelayer() {
-    return DefaultDelayer.INSTANCE;
+        // Only retry selected hosts. Remove if you want to retry all requests.
+        onlyIf { request -> request.uri().host.contains("example") }
+      }
+    }
   }
 
-  static Delayer of(ScheduledExecutorService scheduler) {
-    return new ScheduledExecutorServiceDelayer(scheduler);
+  suspend fun run() {
+    val response = client.get<String>("https://internal.example.com")
+    println(response)
   }
 }

@@ -20,25 +20,19 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.internal.concurrent;
+package com.github.mizosoft.methanol;
 
-import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ScheduledExecutorService;
+import java.io.IOException;
 
-/** Delays the execution of a given task. */
-public interface Delayer {
+/**
+ * Thrown when a {@link RetryInterceptor} exhausts maximum retries.
+ *
+ * @see RetryInterceptor
+ */
+public class HttpRetriesExhaustedException extends IOException {
 
-  /** Arranges for the task to be submitted to the given executor after the delay is evaluated. */
-  CompletableFuture<Void> delay(Runnable task, Duration delay, Executor executor);
-
-  /** A Delayer that uses a library-wide scheduler. */
-  static Delayer defaultDelayer() {
-    return DefaultDelayer.INSTANCE;
-  }
-
-  static Delayer of(ScheduledExecutorService scheduler) {
-    return new ScheduledExecutorServiceDelayer(scheduler);
+  /** Creates a new {@code HttpRetryTimeoutException}. */
+  public HttpRetriesExhaustedException(String message) {
+    super(message);
   }
 }

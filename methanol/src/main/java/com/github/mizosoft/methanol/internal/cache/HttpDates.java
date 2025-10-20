@@ -85,7 +85,7 @@ public class HttpDates {
     return tryParseHttpDate0(value, false).isPresent();
   }
 
-  static Optional<LocalDateTime> tryParseHttpDate(String value) {
+  public static Optional<LocalDateTime> tryParseHttpDate(String value) {
     return tryParseHttpDate0(value, true);
   }
 
@@ -130,7 +130,7 @@ public class HttpDates {
     return Duration.ofSeconds(secondsInt);
   }
 
-  static Optional<Duration> tryParseDeltaSeconds(String value) {
+  public static Optional<Duration> tryParseDeltaSeconds(String value) {
     try {
       return Optional.of(parseDeltaSeconds(value));
     } catch (NumberFormatException ignored) {
@@ -138,7 +138,7 @@ public class HttpDates {
     }
   }
 
-  static LocalDateTime toUtcDateTime(Instant instant) {
+  public static LocalDateTime toUtcDateTime(Instant instant) {
     return LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
   }
 }

@@ -30,6 +30,7 @@ import static java.util.Objects.requireNonNull;
 import com.github.mizosoft.methanol.CacheAwareResponse.CacheStatus;
 import com.github.mizosoft.methanol.internal.extensions.HeadersBuilder;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpHeaders;
@@ -40,6 +41,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import javax.net.ssl.SSLSession;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -47,10 +49,8 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 /** A builder of {@link HttpResponse} instances. */
 public final class ResponseBuilder<T> implements HeadersAccumulator<ResponseBuilder<T>> {
-  private static final int UNSET_STATUS_CODE = -1;
-
   private final HeadersBuilder headersBuilder = new HeadersBuilder();
-  private int statusCode = UNSET_STATUS_CODE;
+  private int statusCode = HttpURLConnection.HTTP_OK;
   private @MonotonicNonNull URI uri;
   private @MonotonicNonNull Version version;
   private @MonotonicNonNull HttpRequest request;
@@ -73,7 +73,7 @@ public final class ResponseBuilder<T> implements HeadersAccumulator<ResponseBuil
 
   @CanIgnoreReturnValue
   public ResponseBuilder<T> statusCode(int statusCode) {
-    requireArgument(statusCode >= 0, "Negative status code");
+    requireArgument(statusCode >= 0, "Negative status code: %d", statusCode);
     this.statusCode = statusCode;
     return this;
   }
@@ -231,9 +231,12 @@ public final class ResponseBuilder<T> implements HeadersAccumulator<ResponseBuil
       return buildTrackedResponse();
     }
     return new HttpResponseImpl<>(
-        ensureSet(statusCode, "statusCode"),
-        ensureSet(uri, "uri"),
-        ensureSet(version, "version"),
+        statusCode,
+        ensureSetOrElseGet(uri, () -> request != null ? request.uri() : null, "uri"),
+        ensureSetOrElseGet(
+            version,
+            () -> request != null ? request.version().orElse(Version.HTTP_1_1) : Version.HTTP_1_1,
+            "version"),
         headersBuilder.build(),
         ensureSet(request, "request"),
         (T) body,
@@ -247,9 +250,12 @@ public final class ResponseBuilder<T> implements HeadersAccumulator<ResponseBuil
       return buildCacheAwareResponse();
     }
     return new TrackedResponseImpl<>(
-        ensureSet(statusCode, "statusCode"),
-        ensureSet(uri, "uri"),
-        ensureSet(version, "version"),
+        statusCode,
+        ensureSetOrElseGet(uri, () -> request != null ? request.uri() : null, "uri"),
+        ensureSetOrElseGet(
+            version,
+            () -> request != null ? request.version().orElse(Version.HTTP_1_1) : Version.HTTP_1_1,
+            "version"),
         headersBuilder.build(),
         ensureSet(request, "request"),
         (T) body,
@@ -262,9 +268,12 @@ public final class ResponseBuilder<T> implements HeadersAccumulator<ResponseBuil
   @SuppressWarnings("unchecked")
   public CacheAwareResponse<T> buildCacheAwareResponse() {
     return new CacheAwareResponseImpl<>(
-        ensureSet(statusCode, "statusCode"),
-        ensureSet(uri, "uri"),
-        ensureSet(version, "version"),
+        statusCode,
+        ensureSetOrElseGet(uri, () -> request != null ? request.uri() : null, "uri"),
+        ensureSetOrElseGet(
+            version,
+            () -> request != null ? request.version().orElse(Version.HTTP_1_1) : Version.HTTP_1_1,
+            "version"),
         headersBuilder.build(),
         ensureSet(request, "request"),
         (T) body,
@@ -328,6 +337,11 @@ public final class ResponseBuilder<T> implements HeadersAccumulator<ResponseBuil
   private static <T> @NonNull T ensureSet(@Nullable T property, String name) {
     requireState(property != null, "%s is required", name);
     return castNonNull(property);
+  }
+
+  private static <T> @NonNull T ensureSetOrElseGet(
+      @Nullable T property, Supplier<T> fallback, String name) {
+    return ensureSet(property != null ? property : fallback.get(), name);
   }
 
   private static class HttpResponseImpl<T> implements HttpResponse<T> {

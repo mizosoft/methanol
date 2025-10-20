@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,14 +34,14 @@ import kotlin.annotation.AnnotationRetention.BINARY
 @MustBeDocumented
 annotation class Spec
 
-/** A [Spec] that creates an object of type [T], typically after invoking a spec configuration block. */
+/** A [spec][Spec] that creates an object of type [T], typically after invoking a spec configuration block. */
 @Spec
 interface FactorySpec<T> {
   fun make(): T
 }
 
 /**
- * A [Spec] in the context of which Kotlin's [kotlin.to] is disabled to avoid conflicts with
+ * A [spec][Spec] in the context of which Kotlin's [kotlin.to] is disabled to avoid conflicts with
  * similarly named spec-defined functions.
  */
 @Spec
@@ -54,7 +54,7 @@ interface PairCreationDisablingSpec {
     error("You probably mean to call a different `to`. Make sure this `to` corresponds to one that is defined by this spec.")
 }
 
-/** A [Spec] for configuring map-like properties with string keys and multi string values. */
+/** A [spec][Spec] for configuring map-like properties with string keys and multi string values. */
 @Spec
 interface StringNameMultiStringValueSpec : PairCreationDisablingSpec {
   infix fun String.to(value: String)

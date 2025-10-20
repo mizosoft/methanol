@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -266,7 +266,7 @@ class MethanolTest {
         MoreBodyPublishers.ofMediaType(
             BodyPublishers.ofString("something"), MediaType.of("text", "plain"));
     client.send(POST("https://example.com", mimeBody), BodyHandlers.discarding());
-    verifyThat(backend.request).containsHeader("Content-Type", "text/plain");
+    verifyThat(backend.request).containsHeaderExactly("Content-Type", "text/plain");
   }
 
   @Test
@@ -557,7 +557,7 @@ class MethanolTest {
                       .whenComplete(
                           (result, ex) -> {
                             if (result != null) {
-                              call.complete((HttpResponse) call.okResponse(responseInfo, result));
+                              call.complete((HttpResponse) call.responseOf(responseInfo, result));
                             }
                           });
                 });
@@ -594,7 +594,7 @@ class MethanolTest {
                       .whenComplete(
                           (result, ex) -> {
                             if (result != null) {
-                              call.complete((HttpResponse) call.okResponse(responseInfo, result));
+                              call.complete((HttpResponse) call.responseOf(responseInfo, result));
                             }
                           });
                 });
@@ -638,7 +638,7 @@ class MethanolTest {
                       .whenComplete(
                           (result, ex) -> {
                             if (result != null) {
-                              call.complete((HttpResponse) call.okResponse(responseInfo, result));
+                              call.complete((HttpResponse) call.responseOf(responseInfo, result));
                             }
                           });
                 });
