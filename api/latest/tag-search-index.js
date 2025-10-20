@@ -1,1 +1,1 @@
-tagSearchIndex = [{"l":"Constant Field Values","h":"","u":"constant-values.html"},{"l":"Serialized Form","h":"","u":"serialized-form.html"}];updateSearchResults();
+tagSearchIndex = [{"l":"Constant Field Values","h":"","u":"constant-values.html"},{"l":"Example:","h":"class com.github.mizosoft.methanol.RetryInterceptor","d":"Section","u":"methanol/com/github/mizosoft/methanol/RetryInterceptor.html#example--heading"},{"l":"Serialized Form","h":"","u":"serialized-form.html"}];updateSearchResults();

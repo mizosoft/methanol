@@ -337,6 +337,8 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html#awaitError(java.time.Duration)" class="member-name-link">awaitError(Duration)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriber</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/MockDelayer.html#awaitingPeekLatestFuture()" class="member-name-link">awaitingPeekLatestFuture()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/MockDelayer.html" title="class in com.github.mizosoft.methanol.testing">MockDelayer</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/MockExecutor.html#awaitNext(long,java.util.concurrent.TimeUnit)" class="member-name-link">awaitNext(long, TimeUnit)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/MockExecutor.html" title="class in com.github.mizosoft.methanol.testing">MockExecutor</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscription.html#awaitRequest()" class="member-name-link">awaitRequest()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscription.html" title="class in com.github.mizosoft.methanol.testing">TestSubscription</a></dt>
@@ -360,6 +362,15 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#backendInterceptors()" class="member-name-link">backendInterceptors()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
 <dd>
 <div class="block">Returns an immutable list of this client's <a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html#backendInterceptor(com.github.mizosoft.methanol.Methanol.Interceptor)"><code>backend interceptors</code></a>.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#backoff(com.github.mizosoft.methanol.RetryInterceptor.BackoffStrategy)" class="member-name-link">backoff(RetryInterceptor.BackoffStrategy)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Specifies the <code>BackoffStrategy</code> to apply every retry.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.BackoffStrategy.html#backoff(com.github.mizosoft.methanol.RetryInterceptor.Context)" class="member-name-link">backoff(RetryInterceptor.Context&lt;?&gt;)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.BackoffStrategy.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.BackoffStrategy</a></dt>
+<dd>
+<div class="block">Returns the <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link"><code>Duration</code></a> to wait for before retrying the request for the given retry
+ number.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#baseUri()" class="member-name-link">baseUri()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
 <dd>
@@ -398,6 +409,11 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Adds the <a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html#basic()"><code>basic encoder</code></a>.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#beginWith(java.util.function.Function)" class="member-name-link">beginWith(Function&lt;HttpRequest, HttpRequest&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Specifies the request modifier to be applied before the request is sent for the first time
+ (attempt 0, not a retry).</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyDecoderFactoryProviders.html#bindings()" class="member-name-link">bindings()</a> - Static method in class com.github.mizosoft.methanol.internal.spi.<a href="methanol/com/github/mizosoft/methanol/internal/spi/BodyDecoderFactoryProviders.html" title="class in com.github.mizosoft.methanol.internal.spi">BodyDecoderFactoryProviders</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/HttpResponseStub.html#body()" class="member-name-link">body()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/HttpResponseStub.html" title="class in com.github.mizosoft.methanol.testing">HttpResponseStub</a></dt>
@@ -421,7 +437,7 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a> - Interface in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
-<div class="block">A collections of hints that provide additional context to customize an adapter's
+<div class="block">A collection of hints that provide additional context to customize an adapter's
  encoding/decoding behavior.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.Builder.html" class="type-name-link" title="class in com.github.mizosoft.methanol">BodyAdapter.Hints.Builder</a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
@@ -539,6 +555,11 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html#build()" class="member-name-link">build()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#build()" class="member-name-link">build()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Builds a new <code>RetryInterceptor</code> that retries all requests based on the conditions
+ specified so far.</div>
+</dd>
 <dt><a href="methanol.redis/com/github/mizosoft/methanol/store/redis/RedisStorageExtension.Builder.html#build()" class="member-name-link">build()</a> - Method in class com.github.mizosoft.methanol.store.redis.<a href="methanol.redis/com/github/mizosoft/methanol/store/redis/RedisStorageExtension.Builder.html" title="class in com.github.mizosoft.methanol.store.redis">RedisStorageExtension.Builder</a></dt>
 <dd>
 <div class="block">Creates a new <code>RedisStorageExtension</code>.</div>
@@ -547,6 +568,16 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/MockGzipStream.Builder.html#build()" class="member-name-link">build()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/MockGzipStream.Builder.html" title="class in com.github.mizosoft.methanol.testing">MockGzipStream.Builder</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#build(java.util.function.BiPredicate)" class="member-name-link">build(BiPredicate&lt;HttpRequest, Methanol.Interceptor.Chain&lt;?&gt;&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Builds a new <code>RetryInterceptor</code> that only retries requests matched by the given
+ predicate based on the conditions specified so far.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#build(java.util.function.Predicate)" class="member-name-link">build(Predicate&lt;HttpRequest&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Builds a new <code>RetryInterceptor</code> that only retries requests matched by the given
+ predicate based on the conditions specified so far.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html#buildCacheAwareResponse()" class="member-name-link">buildCacheAwareResponse()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MultipartBodyPublisher.Builder.html#%3Cinit%3E()" class="member-name-link">Builder()</a> - Constructor for class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MultipartBodyPublisher.Builder.html" title="class in com.github.mizosoft.methanol">MultipartBodyPublisher.Builder</a></dt>
@@ -983,6 +1014,10 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#complete(java.nio.ByteBuffer)" class="member-name-link">complete(ByteBuffer)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#complete(java.util.function.Consumer)" class="member-name-link">complete(Consumer&lt;ResponseBuilder&lt;T&gt;&gt;)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#complete(java.util.function.Consumer,java.nio.ByteBuffer)" class="member-name-link">complete(Consumer&lt;ResponseBuilder&lt;T&gt;&gt;, ByteBuffer)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#complete(T)" class="member-name-link">complete(T)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/DecoderVerifier.BodySubscriberVerifier.html#completedBody()" class="member-name-link">completedBody()</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/DecoderVerifier.BodySubscriberVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">DecoderVerifier.BodySubscriberVerifier</a></dt>
@@ -1047,6 +1082,8 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/RequestVerifier.html#containsHeader(java.lang.String,java.lang.String)" class="member-name-link">containsHeader(String, String)</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/RequestVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">RequestVerifier</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/ResponseVerifier.html#containsHeader(java.lang.String,java.lang.String)" class="member-name-link">containsHeader(String, String)</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/RequestVerifier.html#containsHeaderExactly(java.lang.String,java.lang.String)" class="member-name-link">containsHeaderExactly(String, String)</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/RequestVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">RequestVerifier</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/RequestVerifier.html#containsHeaders(java.net.http.HttpHeaders)" class="member-name-link">containsHeaders(HttpHeaders)</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/RequestVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">RequestVerifier</a></dt>
 <dd>&nbsp;</dd>
@@ -1401,6 +1438,11 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/Store.Viewer.html#dataSize()" class="member-name-link">dataSize()</a> - Method in interface com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/Store.Viewer.html" title="interface in com.github.mizosoft.methanol.internal.cache">Store.Viewer</a></dt>
 <dd>
 <div class="block">Returns the size in bytes of the data stream.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Context.html#deadline()" class="member-name-link">deadline()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Context.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.Context</a></dt>
+<dd>
+<div class="block">Returns an <code>Optional</code> specifying the deadline for retrying, specified according to
+ <a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#timeout(java.time.Duration)"><code>RetryInterceptor.Builder.timeout(Duration)</code></a>.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Builder.html#debugIndexOps(boolean)" class="member-name-link">debugIndexOps(boolean)</a> - Method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/DiskStore.Builder.html" title="class in com.github.mizosoft.methanol.internal.cache">DiskStore.Builder</a></dt>
 <dd>
@@ -1835,6 +1877,12 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns the underlying type as a <code>Class&lt;T&gt;</code> for when it is known that <a href="methanol/com/github/mizosoft/methanol/TypeRef.html" title="class in com.github.mizosoft.methanol"><code>TypeRef</code></a> is a raw
  type.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.html#example--heading" class="search-tag-link">Example:</a> - Search tag in class com.github.mizosoft.methanol.RetryInterceptor</dt>
+<dd>Section</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Context.html#exception()" class="member-name-link">exception()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Context.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.Context</a></dt>
+<dd>
+<div class="block">Returns the resulting exception.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#exchange(java.net.http.HttpRequest,java.net.http.HttpResponse.BodyHandler)" class="member-name-link">exchange(HttpRequest, HttpResponse.BodyHandler&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
 <dd>
 <div class="block">Returns a <code>Publisher</code> for the <code>HttpResponse&lt;T&gt;</code> resulting from asynchronously
@@ -1917,6 +1965,12 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html#expectContinue(boolean)" class="member-name-link">expectContinue(boolean)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.BackoffStrategy.html#exponential(java.time.Duration,java.time.Duration)" class="member-name-link">exponential(Duration, Duration)</a> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.BackoffStrategy.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.BackoffStrategy</a></dt>
+<dd>
+<div class="block">Returns a <code>BackoffStrategy</code> that applies an exponentially (base 2) increasing delay
+ every retry, where <code>base</code> specifies the first delay, and <code>cap</code> specifies the
+ maximum delay.</div>
+</dd>
 </dl>
 <h2 class="title" id="I:F">F</h2>
 <dl class="index">
@@ -1972,6 +2026,10 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/SubmittablePublisher.html#firstSubscription()" class="member-name-link">firstSubscription()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/SubmittablePublisher.html" title="class in com.github.mizosoft.methanol.testing">SubmittablePublisher</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.BackoffStrategy.html#fixed(java.time.Duration)" class="member-name-link">fixed(Duration)</a> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.BackoffStrategy.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.BackoffStrategy</a></dt>
+<dd>
+<div class="block">Returns a <code>BackoffStrategy</code> that applies a fixed delay every retry.</div>
+</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/MockGzipStream.CorruptionMode.html#FLG" class="member-name-link">FLG</a> - Enum constant in enum class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/MockGzipStream.CorruptionMode.html" title="enum class in com.github.mizosoft.methanol.testing">MockGzipStream.CorruptionMode</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/SubmittableSubscription.html#flowInterrupted()" class="member-name-link">flowInterrupted()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/SubmittableSubscription.html" title="class in com.github.mizosoft.methanol.testing">SubmittableSubscription</a></dt>
@@ -2043,7 +2101,7 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.Interceptor.Chain.html#forward(java.net.http.HttpRequest)" class="member-name-link">forward(HttpRequest)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.Interceptor.Chain.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor.Chain</a></dt>
 <dd>
-<div class="block">Forwards the request to the next interceptor, or to the client's backend if called by the
+<div class="block">Forwards the request to the next interceptor or to the client's backend if called by the
  last interceptor.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.Interceptor.Chain.html#forwardAsync(java.net.http.HttpRequest)" class="member-name-link">forwardAsync(HttpRequest)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.Interceptor.Chain.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor.Chain</a></dt>
@@ -2279,6 +2337,8 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/Handlers.html#handleAsync(java.net.http.HttpResponse,java.net.http.HttpResponse.BodyHandler,java.util.concurrent.Executor)" class="member-name-link">handleAsync(HttpResponse&lt;Flow.Publisher&lt;List&lt;ByteBuffer&gt;&gt;&gt;, HttpResponse.BodyHandler&lt;T&gt;, Executor)</a> - Static method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/Handlers.html" title="class in com.github.mizosoft.methanol.internal.extensions">Handlers</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.html#handleCalls(java.util.function.Consumer)" class="member-name-link">handleCalls(Consumer&lt;RecordingHttpClient.Call&lt;?&gt;&gt;)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#handledResponseOf(java.net.http.HttpResponse.ResponseInfo,java.nio.ByteBuffer)" class="member-name-link">handledResponseOf(HttpResponse.ResponseInfo, ByteBuffer)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html#handlerOf(com.github.mizosoft.methanol.TypeRef,com.github.mizosoft.methanol.BodyAdapter.Hints)" class="member-name-link">handlerOf(TypeRef&lt;T&gt;, BodyAdapter.Hints)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/AdapterCodec.html" title="class in com.github.mizosoft.methanol">AdapterCodec</a></dt>
 <dd>
@@ -2571,6 +2631,14 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/HttpResponseStub.html#%3Cinit%3E()" class="member-name-link">HttpResponseStub()</a> - Constructor for class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/HttpResponseStub.html" title="class in com.github.mizosoft.methanol.testing">HttpResponseStub</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/HttpRetriesExhaustedException.html" class="type-name-link" title="class in com.github.mizosoft.methanol">HttpRetriesExhaustedException</a> - Exception Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
+<dd>
+<div class="block">Thrown when a <a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.html" title="class in com.github.mizosoft.methanol"><code>RetryInterceptor</code></a> exhausts maximum retries.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/HttpRetriesExhaustedException.html#%3Cinit%3E(java.lang.String)" class="member-name-link">HttpRetriesExhaustedException(String)</a> - Constructor for exception class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/HttpRetriesExhaustedException.html" title="class in com.github.mizosoft.methanol">HttpRetriesExhaustedException</a></dt>
+<dd>
+<div class="block">Creates a new <code>HttpRetryTimeoutException</code>.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/HttpStatus.html" class="type-name-link" title="class in com.github.mizosoft.methanol">HttpStatus</a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
 <div class="block">Static functions for checking response status codes.</div>
@@ -2694,6 +2762,8 @@ loadScripts(document, 'script');</script>
 <div class="block">Intercepts given request and returns the resulting response, usually by forwarding to the
  given chain.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.html#intercept(java.net.http.HttpRequest,com.github.mizosoft.methanol.Methanol.Interceptor.Chain)" class="member-name-link">intercept(HttpRequest, Methanol.Interceptor.Chain&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.html" title="class in com.github.mizosoft.methanol">RetryInterceptor</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/CacheInterceptor.html#interceptAsync(java.net.http.HttpRequest,com.github.mizosoft.methanol.Methanol.Interceptor.Chain)" class="member-name-link">interceptAsync(HttpRequest, Methanol.Interceptor.Chain&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/CacheInterceptor.html" title="class in com.github.mizosoft.methanol.internal.cache">CacheInterceptor</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/RedirectingInterceptor.html#interceptAsync(java.net.http.HttpRequest,com.github.mizosoft.methanol.Methanol.Interceptor.Chain)" class="member-name-link">interceptAsync(HttpRequest, Methanol.Interceptor.Chain&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/RedirectingInterceptor.html" title="class in com.github.mizosoft.methanol.internal.cache">RedirectingInterceptor</a></dt>
@@ -2703,6 +2773,8 @@ loadScripts(document, 'script');</script>
 <div class="block">Intercepts the given request and returns a <code>CompletableFuture</code> for the resulting
  response, usually by forwarding to the given chain.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.html#interceptAsync(java.net.http.HttpRequest,com.github.mizosoft.methanol.Methanol.Interceptor.Chain)" class="member-name-link">interceptAsync(HttpRequest, Methanol.Interceptor.Chain&lt;T&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.html" title="class in com.github.mizosoft.methanol">RetryInterceptor</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html#interceptor(com.github.mizosoft.methanol.Methanol.Interceptor)" class="member-name-link">interceptor(Methanol.Interceptor)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html" title="class in com.github.mizosoft.methanol">Methanol.BaseBuilder</a></dt>
 <dd>
 <div class="block">Adds an interceptor that is invoked right after the client receives a request.</div>
@@ -3008,6 +3080,11 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/text/CharMatcher.html#lettersOrDigits()" class="member-name-link">lettersOrDigits()</a> - Static method in interface com.github.mizosoft.methanol.internal.text.<a href="methanol/com/github/mizosoft/methanol/internal/text/CharMatcher.html" title="interface in com.github.mizosoft.methanol.internal.text">CharMatcher</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.BackoffStrategy.html#linear(java.time.Duration,java.time.Duration)" class="member-name-link">linear(Duration, Duration)</a> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.BackoffStrategy.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.BackoffStrategy</a></dt>
+<dd>
+<div class="block">Returns a <code>BackoffStrategy</code> that applies a linearly increasing delay every retry, where
+ <code>base</code> specifies the first delay, and <code>cap</code> specifies the maximum delay.</div>
+</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestUtils.html#lines(java.lang.String)" class="member-name-link">lines(String)</a> - Static method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestUtils.html" title="class in com.github.mizosoft.methanol.testing">TestUtils</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/HttpCache.html#listener()" class="member-name-link">listener()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/HttpCache.html" title="class in com.github.mizosoft.methanol">HttpCache</a></dt>
@@ -3017,6 +3094,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/HttpCache.Builder.html#listener(com.github.mizosoft.methanol.HttpCache.Listener)" class="member-name-link">listener(HttpCache.Listener)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/HttpCache.Builder.html" title="class in com.github.mizosoft.methanol">HttpCache.Builder</a></dt>
 <dd>
 <div class="block">Sets the cache's <code>Listener</code>.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#listener(com.github.mizosoft.methanol.RetryInterceptor.Listener)" class="member-name-link">listener(RetryInterceptor.Listener)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Sets the listener for retry events.</div>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestUtils.html#listFiles(java.nio.file.Path)" class="member-name-link">listFiles(Path)</a> - Static method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestUtils.html" title="class in com.github.mizosoft.methanol.testing">TestUtils</a></dt>
 <dd>&nbsp;</dd>
@@ -3074,6 +3155,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/CacheControl.Builder.html#maxAge(java.time.Duration)" class="member-name-link">maxAge(Duration)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/CacheControl.Builder.html" title="class in com.github.mizosoft.methanol">CacheControl.Builder</a></dt>
 <dd>
 <div class="block">Sets the <code>max-age</code> directive to the given duration.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#maxRetries(int)" class="member-name-link">maxRetries(int)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Specifies the maximum times the interceptor is allowed to retry the request.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/HttpCache.html#maxSize()" class="member-name-link">maxSize()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/HttpCache.html" title="class in com.github.mizosoft.methanol">HttpCache</a></dt>
 <dd>
@@ -3247,6 +3332,8 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/MimeBodyPublisherAdapter.html#%3Cinit%3E(java.net.http.HttpRequest.BodyPublisher,com.github.mizosoft.methanol.MediaType)" class="member-name-link">MimeBodyPublisherAdapter(HttpRequest.BodyPublisher, MediaType)</a> - Constructor for class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/MimeBodyPublisherAdapter.html" title="class in com.github.mizosoft.methanol.internal.extensions">MimeBodyPublisherAdapter</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/util/Compare.html#min(T,T)" class="member-name-link">min(T, T)</a> - Static method in class com.github.mizosoft.methanol.internal.util.<a href="methanol/com/github/mizosoft/methanol/internal/util/Compare.html" title="class in com.github.mizosoft.methanol.internal.util">Compare</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/CacheControl.html#minFresh()" class="member-name-link">minFresh()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/CacheControl.html" title="class in com.github.mizosoft.methanol">CacheControl</a></dt>
 <dd>
 <div class="block">Returns the value of the <code>min-fresh</code> directive if present.</div>
@@ -3415,6 +3502,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns a new <code>ProgressTracker.Builder</code>.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.html#newBuilder()" class="member-name-link">newBuilder()</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.html" title="class in com.github.mizosoft.methanol">RetryInterceptor</a></dt>
+<dd>
+<div class="block">Returns a new builder of <code>RetryInterceptor</code> instances.</div>
+</dd>
 <dt><a href="methanol.redis/com/github/mizosoft/methanol/store/redis/RedisStorageExtension.html#newBuilder()" class="member-name-link">newBuilder()</a> - Static method in interface com.github.mizosoft.methanol.store.redis.<a href="methanol.redis/com/github/mizosoft/methanol/store/redis/RedisStorageExtension.html" title="interface in com.github.mizosoft.methanol.store.redis">RedisStorageExtension</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/MockGzipStream.html#newBuilder()" class="member-name-link">newBuilder()</a> - Static method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/MockGzipStream.html" title="class in com.github.mizosoft.methanol.testing">MockGzipStream</a></dt>
@@ -3462,6 +3553,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/CacheControl.html#noCacheFields()" class="member-name-link">noCacheFields()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/CacheControl.html" title="class in com.github.mizosoft.methanol">CacheControl</a></dt>
 <dd>
 <div class="block">Returns the header fields nominated by <code>no-cache</code> if specified.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.BackoffStrategy.html#none()" class="member-name-link">none()</a> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.BackoffStrategy.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.BackoffStrategy</a></dt>
+<dd>
+<div class="block">Returns a <code>BackoffStrategy</code> that applies no delays.</div>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/store/StoreConfig.FileSystemType.html#NONE" class="member-name-link">NONE</a> - Enum constant in enum class com.github.mizosoft.methanol.testing.store.<a href="methanol.testing/com/github/mizosoft/methanol/testing/store/StoreConfig.FileSystemType.html" title="enum class in com.github.mizosoft.methanol.testing.store">StoreConfig.FileSystemType</a></dt>
 <dd>&nbsp;</dd>
@@ -3523,6 +3618,14 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/MediaType.html#of(java.lang.String,java.lang.String,java.util.Map)" class="member-name-link">of(String, String, Map&lt;String, String&gt;)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a></dt>
 <dd>
 <div class="block">Returns a new <code>MediaType</code> with the given type, subtype and parameters.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Context.html#of(java.net.http.HttpRequest,java.net.http.HttpResponse,java.lang.Throwable,int)" class="member-name-link">of(HttpRequest, HttpResponse&lt;T&gt;, Throwable, int)</a> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Context.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.Context</a></dt>
+<dd>
+<div class="block">Creates a new retry context based on the given state.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Context.html#of(java.net.http.HttpRequest,java.net.http.HttpResponse,java.lang.Throwable,int,java.time.Instant)" class="member-name-link">of(HttpRequest, HttpResponse&lt;T&gt;, Throwable, int, Instant)</a> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Context.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.Context</a></dt>
+<dd>
+<div class="block">Creates a new retry context based on the given state.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/concurrent/CancellationPropagatingFuture.html#of(java.util.concurrent.CompletableFuture)" class="member-name-link">of(CompletableFuture&lt;T&gt;)</a> - Static method in class com.github.mizosoft.methanol.internal.concurrent.<a href="methanol/com/github/mizosoft/methanol/internal/concurrent/CancellationPropagatingFuture.html" title="class in com.github.mizosoft.methanol.internal.concurrent">CancellationPropagatingFuture</a></dt>
 <dd>&nbsp;</dd>
@@ -3605,10 +3708,16 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns a <code>BodyPublisher</code> that reads what's written to the <code>WritableByteChannel</code>
  received by the given task.</div>
 </dd>
-<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#okHandledResponse(java.net.http.HttpResponse.ResponseInfo,java.nio.ByteBuffer)" class="member-name-link">okHandledResponse(HttpResponse.ResponseInfo, ByteBuffer)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
-<dd>&nbsp;</dd>
-<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#okResponse(java.net.http.HttpResponse.ResponseInfo,U)" class="member-name-link">okResponse(HttpResponse.ResponseInfo, U)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
-<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#on(java.util.function.Predicate)" class="member-name-link">on(Predicate&lt;RetryInterceptor.Context&lt;?&gt;&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Specifies that the interceptor is to retry the request if the retry <a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Context.html" title="interface in com.github.mizosoft.methanol"><code>RetryInterceptor.Context</code></a> satisfies
+ the given predicate.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#on(java.util.function.Predicate,java.util.function.Function)" class="member-name-link">on(Predicate&lt;RetryInterceptor.Context&lt;?&gt;&gt;, Function&lt;RetryInterceptor.Context&lt;?&gt;, HttpRequest&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Specifies that the interceptor is to retry the request, after applying the given request
+ modifier, if the retry <a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Context.html" title="interface in com.github.mizosoft.methanol"><code>RetryInterceptor.Context</code></a> satisfies the given predicate.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/decoder/AsyncBodyDecoder.html#onComplete()" class="member-name-link">onComplete()</a> - Method in class com.github.mizosoft.methanol.decoder.<a href="methanol/com/github/mizosoft/methanol/decoder/AsyncBodyDecoder.html" title="class in com.github.mizosoft.methanol.decoder">AsyncBodyDecoder</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/ByteChannelBodySubscriber.html#onComplete()" class="member-name-link">onComplete()</a> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/ByteChannelBodySubscriber.html" title="class in com.github.mizosoft.methanol.internal.extensions">ByteChannelBodySubscriber</a></dt>
@@ -3627,6 +3736,11 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html#onComplete()" class="member-name-link">onComplete()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriber</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Listener.html#onComplete(com.github.mizosoft.methanol.RetryInterceptor.Context)" class="member-name-link">onComplete(RetryInterceptor.Context&lt;?&gt;)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Listener.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.Listener</a></dt>
+<dd>
+<div class="block">Called when the interceptor is about to return the given state as-is because no retry
+ condition matches.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/StorageExtension.html#onDisk(java.nio.file.Path,long)" class="member-name-link">onDisk(Path, long)</a> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/StorageExtension.html" title="interface in com.github.mizosoft.methanol">StorageExtension</a></dt>
 <dd>
 <div class="block">Returns a <code>StorageExtension</code> for saving data on disk under the given directory, not
@@ -3652,6 +3766,34 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html#onError(java.lang.Throwable)" class="member-name-link">onError(Throwable)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriber</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#onException(java.lang.Class...)" class="member-name-link">onException(Class&lt;? extends Throwable&gt;...)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Specifies that the interceptor is to retry the request if an exception with any of the given
+ types is thrown.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#onException(java.util.function.Predicate)" class="member-name-link">onException(Predicate&lt;Throwable&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Specifies that the interceptor is to retry the request if an exception that satisfies the
+ given predicate is thrown.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#onException(java.util.function.Predicate,java.util.function.Function)" class="member-name-link">onException(Predicate&lt;Throwable&gt;, Function&lt;RetryInterceptor.Context&lt;?&gt;, HttpRequest&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Specifies that the interceptor is to retry the request, after applying the given request
+ modifier, if an exception that satisfies the given predicate is thrown.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#onException(java.util.Set,java.util.function.Function)" class="member-name-link">onException(Set&lt;Class&lt;? extends Throwable&gt;&gt;, Function&lt;RetryInterceptor.Context&lt;?&gt;, HttpRequest&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Specifies that the interceptor is to retry the request, after applying the given request
+ modifier, if an exception with any of the given types is thrown.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Listener.html#onExhaustion(com.github.mizosoft.methanol.RetryInterceptor.Context)" class="member-name-link">onExhaustion(RetryInterceptor.Context&lt;?&gt;)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Listener.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.Listener</a></dt>
+<dd>
+<div class="block">Called when the interceptor exhausts allowed retry attempts.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Listener.html#onFirstAttempt(java.net.http.HttpRequest)" class="member-name-link">onFirstAttempt(HttpRequest)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Listener.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.Listener</a></dt>
+<dd>
+<div class="block">Called when the interceptor is about to send the request for the first time.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/CacheControl.Builder.html#onlyIfCached()" class="member-name-link">onlyIfCached()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/CacheControl.Builder.html" title="class in com.github.mizosoft.methanol">CacheControl.Builder</a></dt>
 <dd>
 <div class="block">Sets the <code>only-if-cached</code> directive.</div>
@@ -3697,6 +3839,40 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/HttpCache.Listener.html#onResponse(java.net.http.HttpRequest,com.github.mizosoft.methanol.CacheAwareResponse)" class="member-name-link">onResponse(HttpRequest, CacheAwareResponse&lt;?&gt;)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/HttpCache.Listener.html" title="interface in com.github.mizosoft.methanol">HttpCache.Listener</a></dt>
 <dd>
 <div class="block">Called when the cache is ready to serve the response.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#onResponse(java.util.function.Predicate)" class="member-name-link">onResponse(Predicate&lt;HttpResponse&lt;?&gt;&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Specifies that the interceptor is to retry the request if a response that satisfies the given
+ predicate is received.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#onResponse(java.util.function.Predicate,java.util.function.Function)" class="member-name-link">onResponse(Predicate&lt;HttpResponse&lt;?&gt;&gt;, Function&lt;RetryInterceptor.Context&lt;?&gt;, HttpRequest&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Specifies that the interceptor is to retry the request, after applying the given request
+ modifier, if a response that satisfies the given predicate is received.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Listener.html#onRetry(com.github.mizosoft.methanol.RetryInterceptor.Context,java.net.http.HttpRequest,java.time.Duration)" class="member-name-link">onRetry(RetryInterceptor.Context&lt;?&gt;, HttpRequest, Duration)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Listener.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.Listener</a></dt>
+<dd>
+<div class="block">Called when the interceptor is about to retry a request.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#onStatus(int...)" class="member-name-link">onStatus(int...)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Specifies that the interceptor is to retry the request if a response with any of the given
+ status codes is received.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#onStatus(java.util.function.Predicate)" class="member-name-link">onStatus(Predicate&lt;Integer&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Specifies that the interceptor is to retry the request if a response whose code satisfies the
+ given predicate is received.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#onStatus(java.util.function.Predicate,java.util.function.Function)" class="member-name-link">onStatus(Predicate&lt;Integer&gt;, Function&lt;RetryInterceptor.Context&lt;?&gt;, HttpRequest&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Specifies that the interceptor is to retry the request, after applying the given request
+ modifier, if a response whose code satisfies the given predicate is received.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#onStatus(java.util.Set,java.util.function.Function)" class="member-name-link">onStatus(Set&lt;Integer&gt;, Function&lt;RetryInterceptor.Context&lt;?&gt;, HttpRequest&gt;)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Specifies that the interceptor is to retry the request, after applying the given request
+ modifier, if a response with any of the given status codes is received.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/decoder/AsyncBodyDecoder.html#onSubscribe(java.util.concurrent.Flow.Subscription)" class="member-name-link">onSubscribe(Flow.Subscription)</a> - Method in class com.github.mizosoft.methanol.decoder.<a href="methanol/com/github/mizosoft/methanol/decoder/AsyncBodyDecoder.html" title="class in com.github.mizosoft.methanol.decoder">AsyncBodyDecoder</a></dt>
 <dd>&nbsp;</dd>
@@ -4352,6 +4528,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the <code>HttpRequest</code> hint.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Context.html#request()" class="member-name-link">request()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Context.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.Context</a></dt>
+<dd>
+<div class="block">Returns the last-sent request.</div>
+</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/HttpResponseStub.html#request()" class="member-name-link">request()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/HttpResponseStub.html" title="class in com.github.mizosoft.methanol.testing">HttpResponseStub</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#request()" class="member-name-link">request()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
@@ -4456,6 +4636,10 @@ loadScripts(document, 'script');</script>
 <div class="block">Resolves the given supertype into a type with concrete type arguments (if any) that are derived
  from this type (i.e.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Context.html#response()" class="member-name-link">response()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Context.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.Context</a></dt>
+<dd>
+<div class="block">Returns the resulting response.</div>
+</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/ResponseVerifier.html#response()" class="member-name-link">response()</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html" class="type-name-link" title="class in com.github.mizosoft.methanol">ResponseBuilder&lt;T&gt;</a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
@@ -4466,6 +4650,8 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Returns the <code>ResponseInfo</code> hint.</div>
 </dd>
+<dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html#responseOf(java.net.http.HttpResponse.ResponseInfo,U)" class="member-name-link">responseOf(HttpResponse.ResponseInfo, U)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/RecordingHttpClient.Call.html" title="class in com.github.mizosoft.methanol.testing">RecordingHttpClient.Call</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/ResponsePayload.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">ResponsePayload</a> - Interface in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
 <div class="block">A response body that is yet to be handled into the desirable type.</div>
@@ -4478,6 +4664,35 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/ResponseVerifier.html#responseWasReceivedAt(java.time.Instant)" class="member-name-link">responseWasReceivedAt(Instant)</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.BackoffStrategy.html#retryAfterOr(com.github.mizosoft.methanol.RetryInterceptor.BackoffStrategy)" class="member-name-link">retryAfterOr(RetryInterceptor.BackoffStrategy)</a> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.BackoffStrategy.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.BackoffStrategy</a></dt>
+<dd>
+<div class="block">Returns a <code>BackoffStrategy</code> that gets the delay from the value of response's <code>
+ Retry-After</code> header, or defers to the given <code>BackoffStrategy</code> if no such header exists.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Context.html#retryCount()" class="member-name-link">retryCount()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Context.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.Context</a></dt>
+<dd>
+<div class="block">Returns the number of times the request has been retried.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.html" class="type-name-link" title="class in com.github.mizosoft.methanol">RetryInterceptor</a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
+<dd>
+<div class="block">An interceptor that retries HTTP requests based on configurable conditions.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.BackoffStrategy.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">RetryInterceptor.BackoffStrategy</a> - Interface in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
+<dd>
+<div class="block">A strategy for backing off (delaying) before a retry.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" class="type-name-link" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
+<dd>
+<div class="block">A builder of <a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.html" title="class in com.github.mizosoft.methanol"><code>RetryInterceptor</code></a> instances.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Context.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">RetryInterceptor.Context&lt;T&gt;</a> - Interface in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
+<dd>
+<div class="block">Context for deciding whether an HTTP call should be retried.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Listener.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">RetryInterceptor.Listener</a> - Interface in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
+<dd>
+<div class="block">A listener for <a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.html" title="class in com.github.mizosoft.methanol"><code>RetryInterceptor</code></a> events.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/function/ThrowingRunnable.html#run()" class="member-name-link">run()</a> - Method in interface com.github.mizosoft.methanol.internal.function.<a href="methanol/com/github/mizosoft/methanol/internal/function/ThrowingRunnable.html" title="interface in com.github.mizosoft.methanol.internal.function">ThrowingRunnable</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/MockExecutor.html#runAll()" class="member-name-link">runAll()</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/MockExecutor.html" title="class in com.github.mizosoft.methanol.testing">MockExecutor</a></dt>
@@ -5087,6 +5302,12 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">A <code>Supplier</code> that may throw a checked exception.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#throwOnExhaustion()" class="member-name-link">throwOnExhaustion()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Specifies that the interceptor is to throw an <a href="methanol/com/github/mizosoft/methanol/HttpRetriesExhaustedException.html" title="class in com.github.mizosoft.methanol"><code>HttpRetriesExhaustedException</code></a> if the
+ maximum number of retries is exceeded, with the last-thrown exception (if any) added as a
+ suppressed exception.</div>
+</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html#throwOnNext(boolean)" class="member-name-link">throwOnNext(boolean)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriber</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html#throwOnSubscribe(boolean)" class="member-name-link">throwOnSubscribe(boolean)</a> - Method in class com.github.mizosoft.methanol.testing.<a href="methanol.testing/com/github/mizosoft/methanol/testing/TestSubscriber.html" title="class in com.github.mizosoft.methanol.testing">TestSubscriber</a></dt>
@@ -5099,6 +5320,10 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MutableRequest.html#timeout(java.time.Duration)" class="member-name-link">timeout(Duration)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MutableRequest.html" title="class in com.github.mizosoft.methanol">MutableRequest</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#timeout(java.time.Duration)" class="member-name-link">timeout(Duration)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Sets a timeout for the entire retry process.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html#timeout(java.time.Duration)" class="member-name-link">timeout(Duration)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/TaggableRequest.Builder.html" title="interface in com.github.mizosoft.methanol">TaggableRequest.Builder</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/concurrent/Timeout.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.concurrent">Timeout</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/concurrent/package-summary.html">com.github.mizosoft.methanol.internal.concurrent</a></dt>
@@ -5354,6 +5579,8 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/function/ThrowingSupplier.html#toUnchecked()" class="member-name-link">toUnchecked()</a> - Method in interface com.github.mizosoft.methanol.internal.function.<a href="methanol/com/github/mizosoft/methanol/internal/function/ThrowingSupplier.html" title="interface in com.github.mizosoft.methanol.internal.function">ThrowingSupplier</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/HttpDates.html#toUtcDateTime(java.time.Instant)" class="member-name-link">toUtcDateTime(Instant)</a> - Static method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/HttpDates.html" title="class in com.github.mizosoft.methanol.internal.cache">HttpDates</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/ResponseVerifier.html#trackedResponse()" class="member-name-link">trackedResponse()</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/TrackedResponse.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">TrackedResponse&lt;T&gt;</a> - Interface in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
@@ -5394,6 +5621,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/file/ForwardingAsynchronousFileChannel.html#tryLock(long,long,boolean)" class="member-name-link">tryLock(long, long, boolean)</a> - Method in class com.github.mizosoft.methanol.testing.file.<a href="methanol.testing/com/github/mizosoft/methanol/testing/file/ForwardingAsynchronousFileChannel.html" title="class in com.github.mizosoft.methanol.testing.file">ForwardingAsynchronousFileChannel</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/file/ForwardingFileChannel.html#tryLock(long,long,boolean)" class="member-name-link">tryLock(long, long, boolean)</a> - Method in class com.github.mizosoft.methanol.testing.file.<a href="methanol.testing/com/github/mizosoft/methanol/testing/file/ForwardingFileChannel.html" title="class in com.github.mizosoft.methanol.testing.file">ForwardingFileChannel</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/HttpDates.html#tryParseDeltaSeconds(java.lang.String)" class="member-name-link">tryParseDeltaSeconds(String)</a> - Static method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/HttpDates.html" title="class in com.github.mizosoft.methanol.internal.cache">HttpDates</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/HttpDates.html#tryParseHttpDate(java.lang.String)" class="member-name-link">tryParseHttpDate(String)</a> - Static method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/HttpDates.html" title="class in com.github.mizosoft.methanol.internal.cache">HttpDates</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/MediaType.html#type()" class="member-name-link">type()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/MediaType.html" title="class in com.github.mizosoft.methanol">MediaType</a></dt>
 <dd>
@@ -5697,6 +5928,17 @@ the order they are declared.</div>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/text/CharMatcher.html#withinClosedRange(int,int)" class="member-name-link">withinClosedRange(int, int)</a> - Static method in interface com.github.mizosoft.methanol.internal.text.<a href="methanol/com/github/mizosoft/methanol/internal/text/CharMatcher.html" title="interface in com.github.mizosoft.methanol.internal.text">CharMatcher</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.BackoffStrategy.html#withJitter()" class="member-name-link">withJitter()</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.BackoffStrategy.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.BackoffStrategy</a></dt>
+<dd>
+<div class="block">Returns a <code>BackoffStrategy</code> that applies <a href="https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/">full
+ jitter</a> to this <code>BackoffStrategy</code>.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.BackoffStrategy.html#withJitter(double)" class="member-name-link">withJitter(double)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.BackoffStrategy.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.BackoffStrategy</a></dt>
+<dd>
+<div class="block">Returns a <code>BackoffStrategy</code> that applies <a href="https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/">full
+ jitter</a> to this <code>BackoffStrategy</code>, where the degree of "fullness" is specified by
+ the given factor.</div>
+</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/DecoderVerifier.BodyConversionStep.html#withMediaType(com.github.mizosoft.methanol.MediaType)" class="member-name-link">withMediaType(MediaType)</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/DecoderVerifier.BodyConversionStep.html" title="class in com.github.mizosoft.methanol.testing.verifiers">DecoderVerifier.BodyConversionStep</a></dt>
 <dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/EncoderVerifier.ObjectConversionStep.html#withMediaType(com.github.mizosoft.methanol.MediaType)" class="member-name-link">withMediaType(MediaType)</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/EncoderVerifier.ObjectConversionStep.html" title="class in com.github.mizosoft.methanol.testing.verifiers">EncoderVerifier.ObjectConversionStep</a></dt>
