@@ -115,6 +115,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import reactor.core.publisher.Flux;
@@ -554,7 +555,9 @@ class IntegrationTest {
     assertEquals(expected, uploaded);
   }
 
+  // For some reason this test sometimes times out under TestUtils.TIMEOUT_SECONDS on CI.
   @Test
+  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   void ofObject_downloadXml() throws Exception {
     server.enqueue(
         new MockResponse.Builder()
@@ -567,7 +570,9 @@ class IntegrationTest {
     assertEquals(EPIC_ART_COURSE_JAVAX, response.body());
   }
 
+  // For some reason this test sometimes times out under TestUtils.TIMEOUT_SECONDS on CI.
   @Test
+  @Timeout(TestUtils.SLOW_TIMEOUT_SECONDS)
   void ofObject_downloadXmlJakarta() throws Exception {
     server.enqueue(
         new MockResponse.Builder()
