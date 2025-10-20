@@ -522,6 +522,11 @@ public final class RetryInterceptor implements Methanol.Interceptor {
      */
     static BackoffStrategy linear(Duration base, Duration cap) {
       requirePositiveDuration(base);
+      requireArgument(
+          base.compareTo(cap) <= 0,
+          "Base delay (%s) must be less than or equal to cap delay (%s)",
+          base,
+          cap);
       return context ->
           Compare.min(
               cap, base.multipliedBy(1 + Math.min(context.retryCount(), Integer.MAX_VALUE - 1)));
