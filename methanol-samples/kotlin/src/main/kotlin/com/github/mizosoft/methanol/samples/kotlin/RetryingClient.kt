@@ -38,7 +38,7 @@ object RetryingClient {
     requestTimeout(10.seconds)
     interceptors {
       +RetryInterceptor {
-        maxRetries(5) // Default is 5
+        maxRetries(3) // Default is 5
         onException<ConnectException, HttpTimeoutException>()
         onStatus(HttpStatus::isServerError)
         backoff(BackoffStrategy.exponential(100.milliseconds, 15.seconds).withJitter())
