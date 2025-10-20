@@ -1155,7 +1155,7 @@ and backs off each retry with <a href="https://aws.amazon.com/blogs/architecture
 <ol>
 <li>None of the specified conditions evaluate to true. The resulting response or thrown exception is forwarded as-is, which is what you want.</li>
 <li>At least one retry condition evaluates to true, but the maximum number of retries is exhausted. By default, the resulting response or thrown exception is forwarded as-is. If you never want to get a retryable response or exception, call builder's <code>RetryInterceptor.Builder::throwOnExhaustion</code> so an <code>HttpRetriesExhaustedException</code> is thrown in this case.</li>
-<li>The total retry timeout is exceeded. An <code>HttpRetryTimeoutException</code> is thrown in this case.</li>
+<li>The total retry timeout is exceeded. An <code>HttpTimeoutException</code> is thrown in this case.</li>
 </ol>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
