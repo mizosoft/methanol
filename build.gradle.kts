@@ -14,8 +14,8 @@ allprojects {
   group = "com.github.mizosoft.methanol"
   version = Version(
     major = 1,
-    minor = 8,
-    patch = 5,
+    minor = 9,
+    patch = 0,
     release = if (project.hasProperty("finalRelease")) Version.Release.FINAL else Version.Release.SNAPSHOT
   )
 

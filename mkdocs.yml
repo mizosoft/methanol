@@ -65,11 +65,12 @@ nav:
   - Documentation:
     - Methanol HttpClient: methanol_httpclient.md
     - Adapters: adapters.md
-    - Interceptors: interceptors.md
-    - Caching: caching.md
-    - Decompression: decompression.md
     - Media Types: media_types.md
     - Multipart & Forms: multipart_and_forms.md
+    - Interceptors: interceptors.md
+    - Caching: caching.md
+    - Retrying Requests: retrying_requests.md
+    - Decompression: decompression.md
     - Progress Tracking: progress_tracking.md
     - Streaming Requests: streaming_requests.md
   - Kotlin DSL: kotlin.md
