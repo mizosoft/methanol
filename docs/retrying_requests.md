@@ -55,7 +55,7 @@ If any of the conditions evaluates to true, the request is retried. Retrying goe
 
    1. None of the specified conditions evaluate to true. The resulting response or thrown exception is forwarded as-is, which is what you want.
    2. At least one retry condition evaluates to true, but the maximum number of retries is exhausted. By default, the resulting response or thrown exception is forwarded as-is. If you never want to get a retryable response or exception, call builder's `RetryInterceptor.Builder::throwOnExhaustion` so an `HttpRetriesExhaustedException` is thrown in this case.
-   3. The total retry timeout is exceeded. An `HttpRetryTimeoutException` is thrown in this case.
+   3. The total retry timeout is exceeded. An `HttpTimeoutException` is thrown in this case.
 
 !!! note
     Retry conditions are evaluated in declaration order. The first matching condition determines retry behavior - subsequent conditions are not evaluated.
