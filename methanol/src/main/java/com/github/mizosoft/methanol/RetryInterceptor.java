@@ -28,6 +28,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.cache.HttpDates;
+import com.github.mizosoft.methanol.internal.concurrent.CancellationPropagatingFuture;
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.internal.util.Compare;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -205,16 +206,6 @@ public final class RetryInterceptor implements Methanol.Interceptor {
         : chain.forwardAsync(request);
   }
 
-  private static void closeBodyQuietly(HttpResponse<?> response) {
-    if (response.body() instanceof AutoCloseable) {
-      try {
-        ((AutoCloseable) response.body()).close();
-      } catch (Exception e) {
-        logger.log(Logger.Level.WARNING, "Failed to close response body", e);
-      }
-    }
-  }
-
   private HttpTimeoutException timeout(HttpRequest initialRequest, @Nullable Context<?> context) {
     var exception =
         new HttpTimeoutException(
@@ -230,6 +221,64 @@ public final class RetryInterceptor implements Methanol.Interceptor {
       listener.onComplete(Context.of(initialRequest, null, exception, 0));
     }
     return exception;
+  }
+
+  private RetryAction proceed(Context<?> context) {
+    if (context.deadline().isPresent() && !clock.instant().isBefore(context.deadline().get())) {
+      return Timeout.INSTANCE; // Listener will be called by timeout().
+    } else if (context.retryCount() >= maxRetries) {
+      if (throwOnExhaustion) {
+        listener.onExhaustion(context);
+        return Exhausted.INSTANCE;
+      } else {
+        listener.onComplete(context);
+        return Complete.INSTANCE;
+      }
+    } else {
+      return eval(context)
+          .<RetryAction>map(
+              nextRequest -> {
+                var delay = backoffStrategy.backoff(context);
+                listener.onRetry(context, nextRequest, delay);
+                return new Retry(nextRequest, delay);
+              })
+          .orElseGet(
+              () -> {
+                listener.onComplete(context);
+                return Complete.INSTANCE;
+              });
+    }
+  }
+
+  private Optional<HttpRequest> eval(Context<?> context) {
+    return conditions.stream()
+        .map(condition -> condition.test(context))
+        .flatMap(Optional::stream)
+        .findFirst();
+  }
+
+  private HttpRequest applyTimeout(HttpRequest request, @Nullable Duration timeout) {
+    return timeout != null
+            && (request.timeout().isEmpty() || timeout.compareTo(request.timeout().get()) < 0)
+        ? MutableRequest.copyOf(request).timeout(timeout).toImmutableRequest()
+        : request;
+  }
+
+  private static <E extends Exception> E suppressing(@Nullable Context<?> context, E exception) {
+    if (context != null) {
+      context.exception().ifPresent(exception::addSuppressed);
+    }
+    return exception;
+  }
+
+  private static void closeBodyQuietly(HttpResponse<?> response) {
+    if (response.body() instanceof AutoCloseable) {
+      try {
+        ((AutoCloseable) response.body()).close();
+      } catch (Exception e) {
+        logger.log(Logger.Level.WARNING, "Failed to close response body", e);
+      }
+    }
   }
 
   /** Returns a new builder of {@code RetryInterceptor} instances. */
@@ -266,8 +315,7 @@ public final class RetryInterceptor implements Methanol.Interceptor {
         return CompletableFuture.failedFuture(timeout(request, context));
       }
 
-      return delayer
-          .delay(() -> {}, retry.delay, Runnable::run)
+      return CancellationPropagatingFuture.of(delayer.delay(() -> {}, retry.delay, Runnable::run))
           .thenCompose(__ -> continueRetryAfterDelay(context, retry));
     }
 
@@ -327,54 +375,6 @@ public final class RetryInterceptor implements Methanol.Interceptor {
         throw new AssertionError("Unexpected action: " + action);
       }
     }
-  }
-
-  private static <E extends Exception> E suppressing(@Nullable Context<?> context, E exception) {
-    if (context != null) {
-      context.exception().ifPresent(exception::addSuppressed);
-    }
-    return exception;
-  }
-
-  private RetryAction proceed(Context<?> context) {
-    if (context.deadline().isPresent() && !clock.instant().isBefore(context.deadline().get())) {
-      return Timeout.INSTANCE; // Listener will be called by timeout().
-    } else if (context.retryCount() >= maxRetries) {
-      if (throwOnExhaustion) {
-        listener.onExhaustion(context);
-        return Exhausted.INSTANCE;
-      } else {
-        listener.onComplete(context);
-        return Complete.INSTANCE;
-      }
-    } else {
-      return eval(context)
-          .<RetryAction>map(
-              nextRequest -> {
-                var delay = backoffStrategy.backoff(context);
-                listener.onRetry(context, nextRequest, delay);
-                return new Retry(nextRequest, delay);
-              })
-          .orElseGet(
-              () -> {
-                listener.onComplete(context);
-                return Complete.INSTANCE;
-              });
-    }
-  }
-
-  private Optional<HttpRequest> eval(Context<?> context) {
-    return conditions.stream()
-        .map(condition -> condition.test(context))
-        .flatMap(Optional::stream)
-        .findFirst();
-  }
-
-  private HttpRequest applyTimeout(HttpRequest request, @Nullable Duration timeout) {
-    return timeout != null
-            && (request.timeout().isEmpty() || timeout.compareTo(request.timeout().get()) < 0)
-        ? MutableRequest.copyOf(request).timeout(timeout).toImmutableRequest()
-        : request;
   }
 
   private interface RetryAction {}
@@ -834,9 +834,9 @@ public final class RetryInterceptor implements Methanol.Interceptor {
     }
 
     /**
-     * Specifies that the interceptor is to throw an {@link HttpRetriesExhaustedException} if
-     * retries are exhausted, with the last thrown exception (if any) added as a suppressed
-     * exception.
+     * Specifies that the interceptor is to throw an {@link HttpRetriesExhaustedException} if the
+     * maximum number of retries is exceeded, with the last-thrown exception (if any) added as a
+     * suppressed exception.
      *
      * <p>By default, when retries are exhausted, the last response or exception is returned/thrown
      * as-is. This allows you to specify a "give up and throw" behavior on the interceptor.

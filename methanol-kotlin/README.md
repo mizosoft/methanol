@@ -432,8 +432,7 @@ You can learn more about interceptors [here](https://mizosoft.github.io/methanol
 
 #### Retrying Requests
 
-Methanol provides an interceptor implementation for retrying requests based on configurable retry conditions.
-The Kotlin DSL is derived from [RetryInterceptor.Builder](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html).
+Methanol provides an [interceptor implementation](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/RetryInterceptor.html) for retrying requests based on configurable retry conditions. The Kotlin DSL for configuring the interceptor is derived from [RetryInterceptor.Builder](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html).
 You can configure the interceptor to retry on certain exceptions, status codes, or generic response predicates. For instance, this is
 an interceptor that retries on timeouts and server errors at most 3 times, backing off exponentially on each retry.
 
@@ -443,21 +442,24 @@ val client = Client {
     basic()
   }
   connectTimeout(5.seconds)
-  requestTimeout(10.secodns)
+  requestTimeout(10.seconds)
   interceptors {
     +RetryInterceptor {
       maxRetries(5) // Default is 5
-      onException<HttpTimeoutException>()
+      onException<ConnectException, HttpTimeoutException>()
       onStatus(HttpStatus::isServerError)
       backoff(BackoffStrategy.exponential(100.milliseconds, 15.seconds).withJitter())
-      onlyIf { request -> request.uri().host.startsWith("internal") } // Only retry internal hosts.
+
+      // Fail when all retry attempts are consumed instead of returning response/exception as-is.
+      throwOnExhaustion()
+
+      // Only retry selected hosts. Remove if you want to retry all requests.
+      onlyIf { request -> request.uri().host.contains("example") }
     }
   }
 }
 
-val response = runBlocking {
-  client.get<String>("https://internal.example.com")
-}
+val response = client.get<String>("https://internal.example.com")
 ```
 
 For more info, see [Retrying Requests](https://mizosoft.github.io/methanol/retrying_requests//).

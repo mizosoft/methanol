@@ -243,6 +243,8 @@ interface RetryInterceptorSpec {
 
   fun backoff(backoffStrategy: BackoffStrategy)
 
+  fun onException(vararg exceptionTypes: KClass<out Throwable>)
+
   fun onException(
     exceptionTypes: Set<KClass<out Throwable>>,
     requestModifier: RetryContext<*>.() -> Request = { request() }
@@ -254,8 +256,6 @@ interface RetryInterceptorSpec {
     exceptionPredicate: (Throwable) -> Boolean,
     requestModifier: RetryContext<*>.() -> Request = { request() }
   )
-
-  fun onException(vararg exceptionTypes: KClass<out Throwable>)
 
   fun onStatus(vararg codes: Int)
 
@@ -369,9 +369,28 @@ private class RetryInterceptorFactorySpec : RetryInterceptorSpec, FactorySpec<In
  * Retries when an exception of type [T] is thrown.
  * Equivalent to `onException(setOf(T::class), requestModifier)`.
  */
+@JvmName("reifiedOnException1")
 inline fun <reified T : Throwable> RetryInterceptorSpec.onException(
   noinline requestModifier: RetryContext<*>.() -> Request = { request() }
 ) = onException(setOf(T::class), requestModifier)
+
+/**
+ * Retries when an exception of type [T1] or [T2] is thrown.
+ * Equivalent to `onException(setOf(T1::class, T2::class), requestModifier)`.
+ */
+@JvmName("reifiedOnException2")
+inline fun <reified T1 : Throwable, reified T2 : Throwable> RetryInterceptorSpec.onException(
+  noinline requestModifier: RetryContext<*>.() -> Request = { request() }
+) = onException(setOf(T1::class, T2::class), requestModifier)
+
+/**
+ * Retries when an exception of type [T1], [T2] or [T3] is thrown.
+ * Equivalent to `onException(setOf(T1::class, T2::class, T3::class), requestModifier)`.
+ */
+@JvmName("reifiedOnException3")
+inline fun <reified T1 : Throwable, reified T2 : Throwable, reified T3 : Throwable> RetryInterceptorSpec.onException(
+  noinline requestModifier: RetryContext<*>.() -> Request = { request() }
+) = onException(setOf(T1::class, T2::class, T3::class), requestModifier)
 
 /** Creates a [RetryListener] that listens to retry events as configured by the given block. */
 @Suppress("FunctionName")

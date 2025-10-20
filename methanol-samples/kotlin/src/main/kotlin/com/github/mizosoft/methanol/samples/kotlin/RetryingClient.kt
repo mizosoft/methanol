@@ -20,6 +20,37 @@
  * SOFTWARE.
  */
 
-package com.github.mizosoft.methanol.springboot.test;
+package com.github.mizosoft.methanol.samples.kotlin
 
-public record Point(int x, int y) {}
+import com.github.mizosoft.methanol.HttpStatus
+import com.github.mizosoft.methanol.kotlin.*
+import java.net.ConnectException
+import java.net.http.HttpTimeoutException
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+
+object RetryingClient {
+  val client = Client {
+    adapterCodec {
+      basic()
+    }
+    connectTimeout(5.seconds)
+    requestTimeout(10.seconds)
+    interceptors {
+      +RetryInterceptor {
+        maxRetries(5) // Default is 5
+        onException<ConnectException, HttpTimeoutException>()
+        onStatus(HttpStatus::isServerError)
+        backoff(BackoffStrategy.exponential(100.milliseconds, 15.seconds).withJitter())
+
+        // Only retry selected hosts. Remove if you want to retry all requests.
+        onlyIf { request -> request.uri().host.contains("example") }
+      }
+    }
+  }
+
+  suspend fun run() {
+    val response = client.get<String>("https://internal.example.com")
+    println(response)
+  }
+}

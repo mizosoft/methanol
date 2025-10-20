@@ -23,17 +23,17 @@
 package com.github.mizosoft.methanol.samples.kotlin
 
 suspend fun main() {
-  System.setProperty("imgur.client.id", "187e3cdbaa11b1a")
   listOf<Example<*>>(
-    Example<CachingClient>(CachingClient) { run() },
-    Example<Coroutines>(Coroutines) { run() },
-    Example<GetPostJson>(GetPostJson) { runGet() },
-    Example<GetPostJson>(GetPostJson) { runPost() },
-    Example<GetPostString>(GetPostString) { runGet() },
-    Example<GetPostString>(GetPostString) { runPost() },
-    Example<Interceptors>(Interceptors) { run() },
-    Example<MultipartAndFormUploads>(MultipartAndFormUploads) { multipartUpload() },
-    Example<MultipartAndFormUploads>(MultipartAndFormUploads) { formUpload() },
+    Example(CachingClient) { run() },
+    Example(Coroutines) { run() },
+    Example(GetPostJson) { runGet() },
+    Example(GetPostJson) { runPost() },
+    Example(GetPostString) { runGet() },
+    Example(GetPostString) { runPost() },
+    Example(Interceptors) { run() },
+    Example(MultipartAndFormUploads) { multipartUpload() },
+    Example(MultipartAndFormUploads) { formUpload() },
+    Example(RetryingClient) { run() },
   ).forEach { it.run() }
   CachingClient.closeCache()
 }
