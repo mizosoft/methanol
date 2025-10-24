@@ -36,6 +36,7 @@ import com.github.mizosoft.methanol.testing.RecordingHttpClient;
 import com.github.mizosoft.methanol.testing.TestException;
 import java.io.IOException;
 import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodyHandlers;
@@ -919,5 +920,51 @@ class RetryInterceptorTest {
         .havingCause()
         .isInstanceOf(HttpRetriesExhaustedException.class);
     assertThat(responseBody.closures).isEqualTo(3);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void nonIdempotentRequestsAreNotRetriedByDefalut(boolean async) {
+    var recordingClient = new RecordingHttpClient();
+    var client =
+        Methanol.newBuilder(recordingClient)
+            .interceptor(RetryInterceptor.newBuilder().maxRetries(1).onStatus(500).build())
+            .build();
+    var responseFuture =
+        send(
+            client,
+            MutableRequest.POST("https://example.com", BodyPublishers.ofString("Hello")),
+            async);
+    recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
+
+    assertThat(responseFuture)
+        .succeedsWithin(Duration.ofSeconds(1))
+        .satisfies(r -> verifyThat(r).hasCode(500));
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void retryNonIdempotentRequest(boolean async) {
+    var recordingClient = new RecordingHttpClient();
+    var client =
+        Methanol.newBuilder(recordingClient)
+            .interceptor(
+                RetryInterceptor.newBuilder()
+                    .maxRetries(1)
+                    .onStatus(500)
+                    .retryNonIdempotent()
+                    .build())
+            .build();
+    var responseFuture =
+        send(
+            client,
+            MutableRequest.POST("https://example.com", BodyPublishers.ofString("Hello")),
+            async);
+    recordingClient.awaitCall().complete(builder -> builder.statusCode(500));
+    recordingClient.awaitCall().complete();
+
+    assertThat(responseFuture)
+        .succeedsWithin(Duration.ofSeconds(1))
+        .satisfies(r -> verifyThat(r).hasCode(200));
   }
 }

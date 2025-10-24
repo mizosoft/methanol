@@ -31,6 +31,7 @@ import com.github.mizosoft.methanol.internal.cache.HttpDates;
 import com.github.mizosoft.methanol.internal.concurrent.CancellationPropagatingFuture;
 import com.github.mizosoft.methanol.internal.concurrent.Delayer;
 import com.github.mizosoft.methanol.internal.util.Compare;
+import com.github.mizosoft.methanol.internal.util.Http;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.IOException;
 import java.lang.System.Logger;
@@ -638,6 +639,7 @@ public final class RetryInterceptor implements Methanol.Interceptor {
     private Delayer delayer = Delayer.defaultDelayer();
     private Listener listener = EmptyListener.INSTANCE;
     private boolean throwOnExhaustion;
+    private boolean retryNonIdempotent;
 
     private final List<RetryCondition> conditions = new ArrayList<>();
 
@@ -852,6 +854,17 @@ public final class RetryInterceptor implements Methanol.Interceptor {
       return this;
     }
 
+    /**
+     * Specifies that requests that are not <a
+     * href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.2.2">idempotent</a> are to be
+     * retried. By default, only idempotent requests are retried.
+     */
+    @CanIgnoreReturnValue
+    public Builder retryNonIdempotent() {
+      this.retryNonIdempotent = true;
+      return this;
+    }
+
     @CanIgnoreReturnValue
     Builder delayer(Delayer delayer) {
       this.delayer = requireNonNull(delayer);
@@ -886,7 +899,11 @@ public final class RetryInterceptor implements Methanol.Interceptor {
      * predicate based on the conditions specified so far.
      */
     public RetryInterceptor build(BiPredicate<HttpRequest, Chain<?>> selector) {
-      return new RetryInterceptor(selector, this);
+      return new RetryInterceptor(
+          retryNonIdempotent
+              ? selector
+              : selector.and((req, __) -> Http.isIdempotent(req.method())),
+          this);
     }
   }
 
