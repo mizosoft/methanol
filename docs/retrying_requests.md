@@ -59,6 +59,9 @@ If any of the conditions evaluates to true, the request is retried. Retrying goe
 
 !!! note
     Retry conditions are evaluated in declaration order. The first matching condition determines retry behavior - subsequent conditions are not evaluated.
+!!! note
+    By default, only [idempotent](https://datatracker.ietf.org/doc/html/rfc7231#section-4.2.2) requests are retried. If you want to retry non-idempotent requests, call builder's `RetryInterceptor.Builder::retryNonIdempotent`.
+    For imposing your own idempotence logic, you can additionally use a [Request Selector](#request-selectors).
 
 ## Request Selectors
 
@@ -87,6 +90,7 @@ Or you may want to only retry if explicitly specified. Request tags are perfect 
 ```java
 class RetryRequestTag {}
 
+// Only retry if a RetryRequestTag is set.
 var client =
     Methanol.newBuilder()
         .interceptor(
@@ -101,8 +105,7 @@ var client =
                         TaggableRequest.tagOf(request, RetryRequestTag.class).isPresent()))
         .build();
 
-// Only retry if a RetryRequestTag is set.
-client.send(
+var response = client.send(
     MutableRequest.GET("https://example.com").tag(new RetryRequestTag()),
     BodyHandlers.discarding());
 ```
