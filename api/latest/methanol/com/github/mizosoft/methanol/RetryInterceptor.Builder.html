@@ -234,15 +234,21 @@ loadScripts(document, 'script');</script>
  modifier, if a response with any of the given status codes is received.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#throwOnExhaustion()" class="member-name-link">throwOnExhaustion</a>()</code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#retryNonIdempotent()" class="member-name-link">retryNonIdempotent</a>()</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">Specifies that requests that are not <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.2.2">idempotent</a> are to be
+ retried.</div>
+</div>
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#throwOnExhaustion()" class="member-name-link">throwOnExhaustion</a>()</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Specifies that the interceptor is to throw an <a href="HttpRetriesExhaustedException.html" title="class in com.github.mizosoft.methanol"><code>HttpRetriesExhaustedException</code></a> if the
  maximum number of retries is exceeded, with the last-thrown exception (if any) added as a
  suppressed exception.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#timeout(java.time.Duration)" class="member-name-link">timeout</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;timeout)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#timeout(java.time.Duration)" class="member-name-link">timeout</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;timeout)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Sets a timeout for the entire retry process.</div>
 </div>
 </div>
@@ -444,6 +450,15 @@ loadScripts(document, 'script');</script>
 
  <p>By default, when retries are exhausted, the last response or exception is returned/thrown
  as-is. This allows you to specify a "give up and throw" behavior on the interceptor.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="retryNonIdempotent()">
+<h3>retryNonIdempotent</h3>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></span>&nbsp;<span class="element-name">retryNonIdempotent</span>()</div>
+<div class="block">Specifies that requests that are not <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.2.2">idempotent</a> are to be
+ retried. By default, only idempotent requests are retried.</div>
 </section>
 </li>
 <li>

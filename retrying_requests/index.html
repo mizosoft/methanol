@@ -1161,6 +1161,11 @@ and backs off each retry with <a href="https://aws.amazon.com/blogs/architecture
 <p class="admonition-title">Note</p>
 <p>Retry conditions are evaluated in declaration order. The first matching condition determines retry behavior - subsequent conditions are not evaluated.</p>
 </div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>By default, only <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.2.2">idempotent</a> requests are retried. If you want to retry non-idempotent requests, call builder's <code>RetryInterceptor.Builder::retryNonIdempotent</code>.
+For imposing your own idempotence logic, you can additionally use a <a href="#request-selectors">Request Selector</a>.</p>
+</div>
 <h2 id="request-selectors">Request Selectors<a class="headerlink" href="#request-selectors" title="Permanent link">&para;</a></h2>
 <p>It is a good practice to share HTTP client instances when talking to different endpoints. If that's the case, you might want to apply
 different retry strategies for each endpoint, or only retry on certain endpoints. You can use request selectors for filtering what requests
@@ -1182,6 +1187,7 @@ to apply a certain <code>RetryInterceptor</code> to.</p>
 <p>Or you may want to only retry if explicitly specified. Request tags are perfect candidates for this.</p>
 <div class="highlight"><pre><span></span><code><span class="kd">class</span> <span class="nc">RetryRequestTag</span><span class="w"> </span><span class="p">{}</span>
 
+<span class="c1">// Only retry if a RetryRequestTag is set.</span>
 <span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span>
 <span class="w">    </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
 <span class="w">        </span><span class="p">.</span><span class="na">interceptor</span><span class="p">(</span>
@@ -1196,8 +1202,7 @@ to apply a certain <code>RetryInterceptor</code> to.</p>
 <span class="w">                        </span><span class="n">TaggableRequest</span><span class="p">.</span><span class="na">tagOf</span><span class="p">(</span><span class="n">request</span><span class="p">,</span><span class="w"> </span><span class="n">RetryRequestTag</span><span class="p">.</span><span class="na">class</span><span class="p">).</span><span class="na">isPresent</span><span class="p">()))</span>
 <span class="w">        </span><span class="p">.</span><span class="na">build</span><span class="p">();</span>
 
-<span class="c1">// Only retry if a RetryRequestTag is set.</span>
-<span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span>
+<span class="kd">var</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span>
 <span class="w">    </span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;https://example.com&quot;</span><span class="p">).</span><span class="na">tag</span><span class="p">(</span><span class="k">new</span><span class="w"> </span><span class="n">RetryRequestTag</span><span class="p">()),</span>
 <span class="w">    </span><span class="n">BodyHandlers</span><span class="p">.</span><span class="na">discarding</span><span class="p">());</span>
 </code></pre></div>

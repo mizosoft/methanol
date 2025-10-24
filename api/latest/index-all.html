@@ -2569,6 +2569,8 @@ loadScripts(document, 'script');</script>
 <div class="block">Returns a value between <code>0.0</code> and <code>1.0</code> representing the ratio between the hit
  and request counts.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/util/Http.html" class="type-name-link" title="class in com.github.mizosoft.methanol.internal.util">Http</a> - Class in <a href="methanol/com/github/mizosoft/methanol/internal/util/package-summary.html">com.github.mizosoft.methanol.internal.util</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/HttpCache.html" class="type-name-link" title="class in com.github.mizosoft.methanol">HttpCache</a> - Class in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
 <div class="block">An <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Caching">HTTP cache</a> that
@@ -2895,8 +2897,18 @@ loadScripts(document, 'script');</script>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/store/RedisStandaloneSession.html#isHealthy()" class="member-name-link">isHealthy()</a> - Method in class com.github.mizosoft.methanol.testing.store.<a href="methanol.testing/com/github/mizosoft/methanol/testing/store/RedisStandaloneSession.html" title="class in com.github.mizosoft.methanol.testing.store">RedisStandaloneSession</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/util/Http.html#isHeuristicallyCacheable(int)" class="member-name-link">isHeuristicallyCacheable(int)</a> - Static method in class com.github.mizosoft.methanol.internal.util.<a href="methanol/com/github/mizosoft/methanol/internal/util/Http.html" title="class in com.github.mizosoft.methanol.internal.util">Http</a></dt>
+<dd>
+<div class="block">Returns whether a response with the given code can be cached based on heuristic expiry in case
+ explicit expiry is absent.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/cache/HttpDates.html#isHttpDate(java.lang.String)" class="member-name-link">isHttpDate(String)</a> - Static method in class com.github.mizosoft.methanol.internal.cache.<a href="methanol/com/github/mizosoft/methanol/internal/cache/HttpDates.html" title="class in com.github.mizosoft.methanol.internal.cache">HttpDates</a></dt>
 <dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/util/Http.html#isIdempotent(java.lang.String)" class="member-name-link">isIdempotent(String)</a> - Static method in class com.github.mizosoft.methanol.internal.util.<a href="methanol/com/github/mizosoft/methanol/internal/util/Http.html" title="class in com.github.mizosoft.methanol.internal.util">Http</a></dt>
+<dd>
+<div class="block">Returns whether the given request method is idempotent, and hence may be retried multiple
+ times.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/HttpStatus.html#isInformational(int)" class="member-name-link">isInformational(int)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/HttpStatus.html" title="class in com.github.mizosoft.methanol">HttpStatus</a></dt>
 <dd>
 <div class="block">Returns <code>true</code> if <code>statusCode</code> is a 1xx informational status code.</div>
@@ -2956,6 +2968,10 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/HttpStatus.html#isRedirection(java.net.http.HttpResponse)" class="member-name-link">isRedirection(HttpResponse&lt;?&gt;)</a> - Static method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/HttpStatus.html" title="class in com.github.mizosoft.methanol">HttpStatus</a></dt>
 <dd>
 <div class="block">Returns <code>true</code> if <code>response.statusCode()</code> is a 3xx redirection status code.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/util/Http.html#isSafe(java.lang.String)" class="member-name-link">isSafe(String)</a> - Static method in class com.github.mizosoft.methanol.internal.util.<a href="methanol/com/github/mizosoft/methanol/internal/util/Http.html" title="class in com.github.mizosoft.methanol.internal.util">Http</a></dt>
+<dd>
+<div class="block">Returns whether the given request method is unsafe, and hence may invalidate cached entries.</div>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/ResponseVerifier.html#isSecure()" class="member-name-link">isSecure()</a> - Method in class com.github.mizosoft.methanol.testing.verifiers.<a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/ResponseVerifier.html" title="class in com.github.mizosoft.methanol.testing.verifiers">ResponseVerifier</a></dt>
 <dd>&nbsp;</dd>
@@ -4692,6 +4708,11 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Listener.html" class="type-name-link" title="interface in com.github.mizosoft.methanol">RetryInterceptor.Listener</a> - Interface in <a href="methanol/com/github/mizosoft/methanol/package-summary.html">com.github.mizosoft.methanol</a></dt>
 <dd>
 <div class="block">A listener for <a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.html" title="class in com.github.mizosoft.methanol"><code>RetryInterceptor</code></a> events.</div>
+</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html#retryNonIdempotent()" class="member-name-link">retryNonIdempotent()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/RetryInterceptor.Builder.html" title="class in com.github.mizosoft.methanol">RetryInterceptor.Builder</a></dt>
+<dd>
+<div class="block">Specifies that requests that are not <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.2.2">idempotent</a> are to be
+ retried.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/internal/function/ThrowingRunnable.html#run()" class="member-name-link">run()</a> - Method in interface com.github.mizosoft.methanol.internal.function.<a href="methanol/com/github/mizosoft/methanol/internal/function/ThrowingRunnable.html" title="interface in com.github.mizosoft.methanol.internal.function">ThrowingRunnable</a></dt>
 <dd>&nbsp;</dd>
