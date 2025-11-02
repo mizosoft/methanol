@@ -198,20 +198,21 @@ loadScripts(document, 'script');</script>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#readTimeout(java.time.Duration)" class="member-name-link">readTimeout</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;readTimeout)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Sets a default <a href="MoreBodySubscribers.html#withReadTimeout(java.net.http.HttpResponse.BodySubscriber,java.time.Duration)"><code>read
- timeout</code></a>.</div>
+<div class="block">Sets a <a href="MoreBodySubscribers.html#withReadTimeout(java.net.http.HttpResponse.BodySubscriber,java.time.Duration)"><code>read timeout</code></a>
+ that is applied to every request.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#readTimeout(java.time.Duration,java.util.concurrent.ScheduledExecutorService)" class="member-name-link">readTimeout</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;readTimeout,
  <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/ScheduledExecutorService.html" title="class or interface in java.util.concurrent" class="external-link">ScheduledExecutorService</a>&nbsp;scheduler)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Sets a default <a href="MoreBodySubscribers.html#withReadTimeout(java.net.http.HttpResponse.BodySubscriber,java.time.Duration,java.util.concurrent.ScheduledExecutorService)"><code>readtimeout</code></a> using the given <code>ScheduledExecutorService</code> for
- scheduling timeout events.</div>
+<div class="block">Sets a default <a href="MoreBodySubscribers.html#withReadTimeout(java.net.http.HttpResponse.BodySubscriber,java.time.Duration,java.util.concurrent.ScheduledExecutorService)"><code>readtimeout</code></a> that is applied to very request, using the given
+ <code>ScheduledExecutorService</code> for scheduling timeout events.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#requestTimeout(java.time.Duration)" class="member-name-link">requestTimeout</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;requestTimeout)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
-<div class="block">Sets a default request timeout to use when not explicitly by an <code>HttpRequest</code>.</div>
+<div class="block">Sets a default <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpRequest.html#timeout()" title="class or interface in java.net.http" class="external-link"><code>request timeout</code></a> to use on every request
+ when no timeout is explicitly set on an <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpRequest.Builder.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.Builder</code></a>.</div>
 </div>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#userAgent(java.lang.String)" class="member-name-link">userAgent</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;userAgent)</code></div>
@@ -301,7 +302,8 @@ loadScripts(document, 'script');</script>
 <h3>requestTimeout</h3>
 <div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
 </span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">requestTimeout</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;requestTimeout)</span></div>
-<div class="block">Sets a default request timeout to use when not explicitly by an <code>HttpRequest</code>.</div>
+<div class="block">Sets a default <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpRequest.html#timeout()" title="class or interface in java.net.http" class="external-link"><code>request timeout</code></a> to use on every request
+ when no timeout is explicitly set on an <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpRequest.Builder.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.Builder</code></a>.</div>
 </section>
 </li>
 <li>
@@ -329,8 +331,9 @@ loadScripts(document, 'script');</script>
 <h3>readTimeout</h3>
 <div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
 </span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">readTimeout</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;readTimeout)</span></div>
-<div class="block">Sets a default <a href="MoreBodySubscribers.html#withReadTimeout(java.net.http.HttpResponse.BodySubscriber,java.time.Duration)"><code>read
- timeout</code></a>. Timeout events are scheduled using a system-wide <code>ScheduledExecutorService</code>.</div>
+<div class="block">Sets a <a href="MoreBodySubscribers.html#withReadTimeout(java.net.http.HttpResponse.BodySubscriber,java.time.Duration)"><code>read timeout</code></a>
+ that is applied to every request. Timeout events are scheduled using a system-wide <code>
+ ScheduledExecutorService</code>.</div>
 </section>
 </li>
 <li>
@@ -339,8 +342,8 @@ loadScripts(document, 'script');</script>
 <div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
 </span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">readTimeout</span><wbr><span class="parameters">(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;readTimeout,
  <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/ScheduledExecutorService.html" title="class or interface in java.util.concurrent" class="external-link">ScheduledExecutorService</a>&nbsp;scheduler)</span></div>
-<div class="block">Sets a default <a href="MoreBodySubscribers.html#withReadTimeout(java.net.http.HttpResponse.BodySubscriber,java.time.Duration,java.util.concurrent.ScheduledExecutorService)"><code>readtimeout</code></a> using the given <code>ScheduledExecutorService</code> for
- scheduling timeout events.</div>
+<div class="block">Sets a default <a href="MoreBodySubscribers.html#withReadTimeout(java.net.http.HttpResponse.BodySubscriber,java.time.Duration,java.util.concurrent.ScheduledExecutorService)"><code>readtimeout</code></a> that is applied to very request, using the given
+ <code>ScheduledExecutorService</code> for scheduling timeout events.</div>
 </section>
 </li>
 <li>

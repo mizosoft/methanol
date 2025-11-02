@@ -4327,17 +4327,17 @@ loadScripts(document, 'script');</script>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#readTimeout()" class="member-name-link">readTimeout()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
 <dd>
 <div class="block">Returns the <a href="methanol/com/github/mizosoft/methanol/MoreBodySubscribers.html#withReadTimeout(java.net.http.HttpResponse.BodySubscriber,java.time.Duration)"><code>read timeout</code></a>
- used for each request.</div>
+ used for every request.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html#readTimeout(java.time.Duration)" class="member-name-link">readTimeout(Duration)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html" title="class in com.github.mizosoft.methanol">Methanol.BaseBuilder</a></dt>
 <dd>
-<div class="block">Sets a default <a href="methanol/com/github/mizosoft/methanol/MoreBodySubscribers.html#withReadTimeout(java.net.http.HttpResponse.BodySubscriber,java.time.Duration)"><code>read
- timeout</code></a>.</div>
+<div class="block">Sets a <a href="methanol/com/github/mizosoft/methanol/MoreBodySubscribers.html#withReadTimeout(java.net.http.HttpResponse.BodySubscriber,java.time.Duration)"><code>read timeout</code></a>
+ that is applied to every request.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html#readTimeout(java.time.Duration,java.util.concurrent.ScheduledExecutorService)" class="member-name-link">readTimeout(Duration, ScheduledExecutorService)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html" title="class in com.github.mizosoft.methanol">Methanol.BaseBuilder</a></dt>
 <dd>
-<div class="block">Sets a default <a href="methanol/com/github/mizosoft/methanol/MoreBodySubscribers.html#withReadTimeout(java.net.http.HttpResponse.BodySubscriber,java.time.Duration,java.util.concurrent.ScheduledExecutorService)"><code>readtimeout</code></a> using the given <code>ScheduledExecutorService</code> for
- scheduling timeout events.</div>
+<div class="block">Sets a default <a href="methanol/com/github/mizosoft/methanol/MoreBodySubscribers.html#withReadTimeout(java.net.http.HttpResponse.BodySubscriber,java.time.Duration,java.util.concurrent.ScheduledExecutorService)"><code>readtimeout</code></a> that is applied to very request, using the given
+ <code>ScheduledExecutorService</code> for scheduling timeout events.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/HttpCache.StatsRecorder.html#recordHit(java.net.URI)" class="member-name-link">recordHit(URI)</a> - Method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/HttpCache.StatsRecorder.html" title="interface in com.github.mizosoft.methanol">HttpCache.StatsRecorder</a></dt>
 <dd>
@@ -4572,11 +4572,13 @@ loadScripts(document, 'script');</script>
 <dd>&nbsp;</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.html#requestTimeout()" class="member-name-link">requestTimeout()</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.html" title="class in com.github.mizosoft.methanol">Methanol</a></dt>
 <dd>
-<div class="block">Returns the default request timeout used when not set in an <code>HttpRequest</code>.</div>
+<div class="block">Returns the default <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpRequest.html#timeout()" title="class or interface in java.net.http" class="external-link"><code>request timeout</code></a> used when no timeout is
+ explicitly set on an <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest</code></a>.</div>
 </dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html#requestTimeout(java.time.Duration)" class="member-name-link">requestTimeout(Duration)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html" title="class in com.github.mizosoft.methanol">Methanol.BaseBuilder</a></dt>
 <dd>
-<div class="block">Sets a default request timeout to use when not explicitly by an <code>HttpRequest</code>.</div>
+<div class="block">Sets a default <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpRequest.html#timeout()" title="class or interface in java.net.http" class="external-link"><code>request timeout</code></a> to use on every request
+ when no timeout is explicitly set on an <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpRequest.Builder.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.Builder</code></a>.</div>
 </dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/RequestVerifier.html" class="type-name-link" title="class in com.github.mizosoft.methanol.testing.verifiers">RequestVerifier</a> - Class in <a href="methanol.testing/com/github/mizosoft/methanol/testing/verifiers/package-summary.html">com.github.mizosoft.methanol.testing.verifiers</a></dt>
 <dd>
