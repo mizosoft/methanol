@@ -275,7 +275,10 @@ public class Methanol extends HttpClient {
     return baseUri;
   }
 
-  /** Returns the default request timeout used when not set in an {@code HttpRequest}. */
+  /**
+   * Returns the default {@link HttpRequest#timeout() request timeout} used when no timeout is
+   * explicitly set on an {@link HttpRequest}.
+   */
   public Optional<Duration> requestTimeout() {
     return requestTimeout;
   }
@@ -287,7 +290,7 @@ public class Methanol extends HttpClient {
 
   /**
    * Returns the {@link MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration) read timeout}
-   * used for each request.
+   * used for every request.
    */
   public Optional<Duration> readTimeout() {
     return readTimeout;
@@ -775,7 +778,10 @@ public class Methanol extends HttpClient {
       return self();
     }
 
-    /** Sets a default request timeout to use when not explicitly by an {@code HttpRequest}. */
+    /**
+     * Sets a default {@link HttpRequest.Builder#timeout() request timeout} to use on every request
+     * when no timeout is explicitly set on an {@link HttpRequest.Builder}.
+     */
     @CanIgnoreReturnValue
     public B requestTimeout(Duration requestTimeout) {
       this.requestTimeout = requirePositiveDuration(requestTimeout);
@@ -809,8 +815,9 @@ public class Methanol extends HttpClient {
     }
 
     /**
-     * Sets a default {@link MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration) read
-     * timeout}. Timeout events are scheduled using a system-wide {@code ScheduledExecutorService}.
+     * Sets a {@link MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration) read timeout}
+     * that is applied to every request. Timeout events are scheduled using a system-wide {@code
+     * ScheduledExecutorService}.
      */
     @CanIgnoreReturnValue
     public B readTimeout(Duration readTimeout) {
@@ -819,8 +826,8 @@ public class Methanol extends HttpClient {
 
     /**
      * Sets a default {@link MoreBodySubscribers#withReadTimeout(BodySubscriber, Duration,
-     * ScheduledExecutorService) readtimeout} using the given {@code ScheduledExecutorService} for
-     * scheduling timeout events.
+     * ScheduledExecutorService) readtimeout} that is applied to very request, using the given
+     * {@code ScheduledExecutorService} for scheduling timeout events.
      */
     @CanIgnoreReturnValue
     public B readTimeout(Duration readTimeout, ScheduledExecutorService scheduler) {
