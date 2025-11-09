@@ -1273,14 +1273,14 @@
 <h2 id="version-184">Version 1.8.4<a class="headerlink" href="#version-184" title="Permanent link">&para;</a></h2>
 <ul>
 <li>
-<p>Fixed [#129], where streaming large files through <code>WritableBodyPublisher</code> on slow networks caused high memory usage.
+<p>Fixed <a href="https://github.com/mizosoft/methanol/issues/129">#129</a>, where streaming large files through <code>WritableBodyPublisher</code> on slow networks caused high memory usage.
   Now the publisher blocks writers when the upload speed can't keep up. Memory usage is bounded according to the expression: 
     <div class="highlight"><pre><span></span><code><span class="kt">int</span><span class="w"> </span><span class="n">memoryQuota</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Integer</span><span class="p">.</span><span class="na">getInteger</span><span class="p">(</span><span class="s">&quot;com.github.mizosoft.methanol.flow.prefetch&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">Integer</span><span class="p">.</span><span class="na">getInteger</span><span class="p">(</span><span class="s">&quot;jdk.httpclient.bufsize&quot;</span><span class="p">,</span><span class="w"> </span><span class="mi">16</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1024</span><span class="p">);</span>
 </code></pre></div>
   Note that this also reflects on <code>MoreBodyPublishers::ofOutputStream</code> &amp; <code>MoreBodyPublishers::ofWritableByteChannel</code>.</p>
 </li>
 <li>
-<p>Fixed [#134], where the system language affected how HTTP dates were formatted.</p>
+<p>Fixed <a href="https://github.com/mizosoft/methanol/issues/134">#134</a>, where the system language affected how HTTP dates were formatted.</p>
 </li>
 </ul>
 <h2 id="version-183">Version 1.8.3<a class="headerlink" href="#version-183" title="Permanent link">&para;</a></h2>

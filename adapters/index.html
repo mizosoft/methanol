@@ -461,6 +461,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#responsepayload-conditional-response-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      ResponsePayload - Conditional Response Handling
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1105,6 +1114,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#responsepayload-conditional-response-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      ResponsePayload - Conditional Response Handling
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1193,8 +1211,8 @@ Adapters for the most popular serialization libraries are provided by separate m
 <span class="kd">var</span><span class="w"> </span><span class="n">adapterCodec</span><span class="w"> </span><span class="o">=</span>
 <span class="w">    </span><span class="n">AdapterCodec</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
 <span class="w">        </span><span class="p">.</span><span class="na">basic</span><span class="p">()</span>
-<span class="w">        </span><span class="p">.</span><span class="na">encoder</span><span class="p">(</span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createEncoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">,</span><span class="w"> </span><span class="n">MediaType</span><span class="p">.</span><span class="na">APPLICATION_JSON</span><span class="p">))</span>
-<span class="w">        </span><span class="p">.</span><span class="na">decoder</span><span class="p">(</span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createDecoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">,</span><span class="w"> </span><span class="n">MediaType</span><span class="p">.</span><span class="na">APPLICATION_JSON</span><span class="p">))</span>
+<span class="w">        </span><span class="p">.</span><span class="na">encoder</span><span class="p">(</span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createJsonEncoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">))</span>
+<span class="w">        </span><span class="p">.</span><span class="na">decoder</span><span class="p">(</span><span class="n">JacksonAdapterFactory</span><span class="p">.</span><span class="na">createJsonDecoder</span><span class="p">(</span><span class="n">mapper</span><span class="p">))</span>
 <span class="w">        </span><span class="p">.</span><span class="na">build</span><span class="p">();</span>
 <span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span>
 <span class="w">    </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
@@ -1205,11 +1223,19 @@ Adapters for the most popular serialization libraries are provided by separate m
 </code></pre></div>
 <p>An <a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/AdapterCodec.html"><code>AdapterCodec</code></a> groups together one or more adapters, possibly targeting different mapping schemes. It helps <code>Methanol</code>
 to select the correct adapter based on the request's or response's <a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/MediaType.html"><code>MediaType</code></a>.</p>
-<p><a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html#basic()"><code>basic()</code></a> adds the basic adapter, which encodes &amp; decodes basic types like <code>String</code> &amp; <code>InputStream</code>.
-Trace through the Javadoc for all supported basic types.</p>
+<p><a href="https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/AdapterCodec.Builder.html#basic()"><code>basic()</code></a> adds the basic adapter, which encodes &amp; decodes basic types like <code>String</code> &amp; <code>InputStream</code>, and enables 
+<a href="./#ResponsePayload-conditional-response-handling">conditional response handling</a>. Trace through the Javadoc for all supported basic types.</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>Adapters are selected based on two criteria: the response/request <code>Content-Type</code> and the high level body type. For instance, <code>methanol-jackson</code> matches
+with <code>application/json</code> &amp; any object type supported by the <code>ObjectMapper</code>. Adapters are prioritized based on <code>AdapterCodec::Builder</code> addition order.
+The first adapter matching the two attributes is selected. The basic adapter matches with any <code>Content-Type</code>, and its supported set of object types.
+It's always a good idea to add the basic adapter first before any other adapter. That way, it will be prioritized for basic types, which you'll unlikely
+want to get handled with complex adapters like <code>methanol-jackson</code>.</p>
+</div>
 <h3 id="receiving-objects">Receiving Objects<a class="headerlink" href="#receiving-objects" title="Permanent link">&para;</a></h3>
 <p>To get an <code>HttpResponse&lt;T&gt;</code>, give <code>Methanol::send</code> a <code>T.class</code>.</p>
-<div class="highlight"><pre><span></span><code><span class="w"> </span><span class="nd">@JsonIgnoreProperties</span><span class="p">(</span><span class="n">ignoreUnknown</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="p">)</span><span class="w"> </span><span class="c1">// We&#39;ll ignore most fields for brevity.</span>
+<div class="highlight"><pre><span></span><code><span class="nd">@JsonIgnoreProperties</span><span class="p">(</span><span class="n">ignoreUnknown</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="p">)</span><span class="w"> </span><span class="c1">// We&#39;ll ignore most fields for brevity.</span>
 <span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">GitHubUser</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">login</span><span class="p">,</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">url</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
 
 <span class="n">GitHubUser</span><span class="w"> </span><span class="nf">getUser</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">username</span><span class="p">)</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">IOException</span><span class="p">,</span><span class="w"> </span><span class="n">InterruptedException</span><span class="w"> </span><span class="p">{</span>
@@ -1238,6 +1264,37 @@ When the request is sent, the payload will be resolved with the client's <code>A
 <span class="p">}</span>
 </code></pre></div>
 <p>A payload must be given along with a <code>MediaType</code> specifying the format with which it will be resolved.</p>
+<h3 id="responsepayload-conditional-response-handling"><code>ResponsePayload</code> - Conditional Response Handling<a class="headerlink" href="#responsepayload-conditional-response-handling" title="Permanent link">&para;</a></h3>
+<p>Sometimes, the response body structure depends on conditional factors like the response status code. In such cases, you can't determine the target type (<code>T.class</code>) beforehand.
+This is where <code>ResponsePayload</code> comes in handy. It is enabled through the basic adapter, which can be added as shown in the client setup above.</p>
+<div class="highlight"><pre><span></span><code><span class="nd">@JsonIgnoreProperties</span><span class="p">(</span><span class="n">ignoreUnknown</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="p">)</span><span class="w"> </span><span class="c1">// We&#39;ll ignore most fields for brevity.</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">GitHubUser</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">login</span><span class="p">,</span><span class="w"> </span><span class="kt">long</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">url</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
+
+<span class="nd">@JsonIgnoreProperties</span><span class="p">(</span><span class="n">ignoreUnknown</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span><span class="p">)</span>
+<span class="kd">public</span><span class="w"> </span><span class="kd">record</span> <span class="nc">ErrorResponse</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">message</span><span class="p">,</span><span class="w"> </span><span class="n">String</span><span class="w"> </span><span class="n">documentation_url</span><span class="p">)</span><span class="w"> </span><span class="p">{}</span>
+
+<span class="kd">public</span><span class="w"> </span><span class="kd">static</span><span class="w"> </span><span class="kd">class</span> <span class="nc">GithubApiException</span><span class="w"> </span><span class="kd">extends</span><span class="w"> </span><span class="n">RuntimeException</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">public</span><span class="w"> </span><span class="nf">GithubApiException</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">message</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kd">super</span><span class="p">(</span><span class="n">message</span><span class="p">);</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="n">GitHubUser</span><span class="w"> </span><span class="nf">getUser</span><span class="p">(</span><span class="n">String</span><span class="w"> </span><span class="n">username</span><span class="p">)</span><span class="w"> </span><span class="kd">throws</span><span class="w"> </span><span class="n">IOException</span><span class="p">,</span><span class="w"> </span><span class="n">InterruptedException</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kd">var</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="na">send</span><span class="p">(</span><span class="n">MutableRequest</span><span class="p">.</span><span class="na">GET</span><span class="p">(</span><span class="s">&quot;users/&quot;</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">username</span><span class="p">),</span><span class="w"> </span><span class="n">ResponsePayload</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
+<span class="w">  </span><span class="k">try</span><span class="w"> </span><span class="p">(</span><span class="kd">var</span><span class="w"> </span><span class="n">payload</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">response</span><span class="p">.</span><span class="na">body</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">HttpStatus</span><span class="p">.</span><span class="na">isSuccessful</span><span class="p">(</span><span class="n">response</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">return</span><span class="w"> </span><span class="n">payload</span><span class="p">.</span><span class="na">to</span><span class="p">(</span><span class="n">GitHubUser</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="kd">var</span><span class="w"> </span><span class="n">error</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">payload</span><span class="p">.</span><span class="na">to</span><span class="p">(</span><span class="n">ErrorResponse</span><span class="p">.</span><span class="na">class</span><span class="p">);</span>
+<span class="w">      </span><span class="k">throw</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">GithubApiException</span><span class="p">(</span><span class="n">String</span><span class="p">.</span><span class="na">format</span><span class="p">(</span><span class="s">&quot;Error: %s%nSee%s%n&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">error</span><span class="p">.</span><span class="na">message</span><span class="p">(),</span><span class="w"> </span><span class="n">error</span><span class="p">.</span><span class="na">documentation_url</span><span class="p">()));</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>You can either pass: 
+ - a type that is supported by the installed <code>AdapterCodec</code>.
+ - a <code>BodyHandler&lt;T&gt;</code> of your choice with <code>ResponsePayload::handleWith</code>.</p>
+<p>Always ensure that the <code>ResponsePayload</code> is closed, even if you consume it. Using a try-with-resources block (as shown above) guarantees that all underlying resources are properly released.</p>
 <h2 id="adapter-api">Adapter API<a class="headerlink" href="#adapter-api" title="Permanent link">&para;</a></h2>
 <p>An adapter provides an <a href="../api/latest/methanol/com/github/mizosoft/methanol/BodyAdapter.Encoder.html"><code>Encoder</code></a> and/or a <a href="../api/latest/methanol/com/github/mizosoft/methanol/BodyAdapter.Decoder.html"><code>Decoder</code></a> implementation.
 An <code>Encoder</code> creates <code>BodyPublisher</code> instances that stream a given object's serialized form.
