@@ -2,14 +2,14 @@
 
 ## Version 1.8.4
 
-* Fixed [#129], where streaming large files through `WritableBodyPublisher` on slow networks caused high memory usage.
+* Fixed [#129](https://github.com/mizosoft/methanol/issues/129), where streaming large files through `WritableBodyPublisher` on slow networks caused high memory usage.
   Now the publisher blocks writers when the upload speed can't keep up. Memory usage is bounded according to the expression: 
     ```java
     int memoryQuota = Integer.getInteger("com.github.mizosoft.methanol.flow.prefetch", 8) * Integer.getInteger("jdk.httpclient.bufsize", 16 * 1024);
     ```
   Note that this also reflects on `MoreBodyPublishers::ofOutputStream` & `MoreBodyPublishers::ofWritableByteChannel`.
 
-* Fixed [#134], where the system language affected how HTTP dates were formatted.
+* Fixed [#134](https://github.com/mizosoft/methanol/issues/134), where the system language affected how HTTP dates were formatted.
 
 ## Version 1.8.3
 

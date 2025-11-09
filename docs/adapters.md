@@ -25,8 +25,8 @@ var mapper = new JsonMapper();
 var adapterCodec =
     AdapterCodec.newBuilder()
         .basic()
-        .encoder(JacksonAdapterFactory.createEncoder(mapper, MediaType.APPLICATION_JSON))
-        .decoder(JacksonAdapterFactory.createDecoder(mapper, MediaType.APPLICATION_JSON))
+        .encoder(JacksonAdapterFactory.createJsonEncoder(mapper))
+        .decoder(JacksonAdapterFactory.createJsonDecoder(mapper))
         .build();
 var client =
     Methanol.newBuilder()
@@ -39,15 +39,22 @@ var client =
 An [`AdapterCodec`][adapter_codec] groups together one or more adapters, possibly targeting different mapping schemes. It helps `Methanol`
 to select the correct adapter based on the request's or response's [`MediaType`](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/MediaType.html).
 
-[`basic()`][adaptercodec_basic_javadoc] adds the basic adapter, which encodes & decodes basic types like `String` & `InputStream`.
-Trace through the Javadoc for all supported basic types.
+[`basic()`][adaptercodec_basic_javadoc] adds the basic adapter, which encodes & decodes basic types like `String` & `InputStream`, and enables 
+[conditional response handling](./#ResponsePayload-conditional-response-handling). Trace through the Javadoc for all supported basic types.
+
+!!! info
+    Adapters are selected based on two criteria: the response/request `Content-Type` and the high level body type. For instance, `methanol-jackson` matches
+    with `application/json` & any object type supported by the `ObjectMapper`. Adapters are prioritized based on `AdapterCodec::Builder` addition order.
+    The first adapter matching the two attributes is selected. The basic adapter matches with any `Content-Type`, and its supported set of object types.
+    It's always a good idea to add the basic adapter first before any other adapter. That way, it will be prioritized for basic types, which you'll unlikely
+    want to get handled with complex adapters like `methanol-jackson`.
 
 ### Receiving Objects
 
 To get an `HttpResponse<T>`, give `Methanol::send` a `T.class`.
 
 ```java
- @JsonIgnoreProperties(ignoreUnknown = true) // We'll ignore most fields for brevity.
+@JsonIgnoreProperties(ignoreUnknown = true) // We'll ignore most fields for brevity.
 public record GitHubUser(String login, long id, String url) {}
 
 GitHubUser getUser(String username) throws IOException, InterruptedException {
@@ -84,6 +91,43 @@ String markdownToHtml(String text, String contextRepo) throws IOException, Inter
 ```
 
 A payload must be given along with a `MediaType` specifying the format with which it will be resolved.
+
+### `ResponsePayload` - Conditional Response Handling
+
+Sometimes, the response body structure depends on conditional factors like the response status code. In such cases, you can't determine the target type (`T.class`) beforehand.
+This is where `ResponsePayload` comes in handy. It is enabled through the basic adapter, which can be added as shown in the client setup above.
+
+```java
+@JsonIgnoreProperties(ignoreUnknown = true) // We'll ignore most fields for brevity.
+public record GitHubUser(String login, long id, String url) {}
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+public record ErrorResponse(String message, String documentation_url) {}
+
+public static class GithubApiException extends RuntimeException {
+  public GithubApiException(String message) {
+    super(message);
+  }
+}
+
+GitHubUser getUser(String username) throws IOException, InterruptedException {
+  var response = client.send(MutableRequest.GET("users/" + username), ResponsePayload.class);
+  try (var payload = response.body()) {
+    if (HttpStatus.isSuccessful(response)) {
+      return payload.to(GitHubUser.class);
+    } else {
+      var error = payload.to(ErrorResponse.class);
+      throw new GithubApiException(String.format("Error: %s%nSee%s%n", error.message(), error.documentation_url()));
+    }
+  }
+}
+```
+
+You can either pass: 
+ - a type that is supported by the installed `AdapterCodec`.
+ - a `BodyHandler<T>` of your choice with `ResponsePayload::handleWith`.
+
+Always ensure that the `ResponsePayload` is closed, even if you consume it. Using a try-with-resources block (as shown above) guarantees that all underlying resources are properly released.
 
 ## Adapter API
 
