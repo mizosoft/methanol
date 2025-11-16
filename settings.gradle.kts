@@ -45,11 +45,3 @@ if (includeNativeTests != null) {
   include("quarkus-native-test")
   include("native-test")
 }
-
-// Only include native brotli-jni project if explicitly requested.
-val includeBrotliJni: String? by settings
-if (includeBrotliJni != null
-  || settings.gradle.startParameter.taskNames.contains("installBrotli")
-) {
-  include("methanol-brotli:brotli-jni")
-}
