@@ -1,0 +1,76 @@
+name: Build Brotli
+
+env:
+  BASE_JAVA: 21
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        type: choice
+        description: 'Platform to build'
+        required: true
+        options:
+          - all
+          - linux-x86-64
+          - linux-aarch64
+          - windows-x86-64
+          - windows-aarch64
+          - macos-x86-64
+          - macos-aarch64
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - platform: linux-x86-64
+            os: ubuntu-latest
+            artifact-name: libbrotlijni.so
+          - platform: linux-aarch64
+            os: ubuntu-24.04-arm
+            artifact-name: libbrotlijni.so
+          - platform: windows-x86-64
+            os: windows-latest
+            artifact-name: brotlijni.dll
+          - platform: windows-aarch64
+            os: windows-11-arm
+            artifact-name: brotlijni.dll
+          - platform: macos-x86-64
+            os: macos-15-intel
+            artifact-name: libbrotlijni.dylib
+          - platform: macos-aarch64
+            os: macos-latest
+            artifact-name: libbrotlijni.dylib
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == matrix.platform }}
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == matrix.platform }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.BASE_JAVA }}
+
+      - name: Configure CMake
+        if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == matrix.platform }}
+        run: |
+          cd methanol-brotli/native
+          cmake .
+
+      - name: Build
+        if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == matrix.platform }}
+        run: |
+          cd methanol-brotli/native
+          cmake --build .
+
+      - name: Upload artifact
+        if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == matrix.platform }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: brotli-${{ matrix.platform }}
+          path: methanol-brotli/native/${{ matrix.artifact-name }}
+          if-no-files-found: error
