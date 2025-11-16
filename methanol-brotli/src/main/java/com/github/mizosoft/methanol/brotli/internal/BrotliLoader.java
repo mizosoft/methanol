@@ -39,7 +39,6 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Stream;
 
 /** Helper class for loading brotli JNI and setting bundled dictionary. */
 final class BrotliLoader {
@@ -67,16 +66,12 @@ final class BrotliLoader {
         104, 119, -40, -50, 123, 58, -127, 127, 55, -113, 49, 54, 83, -13, 92, 112
       };
 
-  private static final BrotliLoader LOADER;
-
-  static {
-    Path configuredTempDir =
-        Path.of(
-            System.getProperty(
-                "com.github.mizosoft.methanol.brotli.tmpdir",
-                System.getProperty("java.io.tmpdir")));
-    LOADER = new BrotliLoader(configuredTempDir);
-  }
+  private static final BrotliLoader INSTANCE =
+      new BrotliLoader(
+          Path.of(
+              System.getProperty(
+                  "com.github.mizosoft.methanol.brotli.tmpdir",
+                  System.getProperty("java.io.tmpdir"))));
 
   private final Path tempDir;
   private final String dictionaryPath;
@@ -95,65 +90,67 @@ final class BrotliLoader {
     if (!loaded) {
       synchronized (this) {
         if (!loaded) {
-          ByteBuffer dictionary = loadBrotliDictionary();
-          LibEntry entry = extractLibrary();
+          var dictionary = loadBrotliDictionary();
+          var entry = extractLibrary();
           entry.deleteOnExit();
           entry.loadLibrary();
           if (!CommonJNI.nativeSetDictionaryData(dictionary)) {
             throw new IOException("failed to set brotli dictionary");
           }
-          loaded = true; // Mission accomplished!
+          loaded = true;
         }
       }
     }
   }
 
   ByteBuffer loadBrotliDictionary() throws IOException {
-    InputStream dicIn = BrotliLoader.class.getResourceAsStream(dictionaryPath);
-    if (dicIn == null) {
-      throw new FileNotFoundException("couldn't find brotli dictionary: " + dictionaryPath);
-    }
-    MessageDigest dictDigest;
-    try {
-      dictDigest = MessageDigest.getInstance("SHA-256");
-    } catch (NoSuchAlgorithmException e) {
-      throw new IOException("cannot digest brotli dictionary", e);
-    }
-    // buffer must be direct as the native address
-    // is directory passed to BrotliSetDictionaryData from the jni side
-    ByteBuffer dictData = ByteBuffer.allocateDirect(BROTLI_DICT_SIZE);
-    try (dicIn) {
+    // The buffer must be direct as the native address is directory passed to
+    // BrotliSetDictionaryData from the JNI side
+    var dictData = ByteBuffer.allocateDirect(BROTLI_DICT_SIZE);
+    try (var dictIn = BrotliLoader.class.getResourceAsStream(dictionaryPath)) {
+      if (dictIn == null) {
+        throw new FileNotFoundException("Couldn't find brotli dictionary: " + dictionaryPath);
+      }
+
+      MessageDigest dictDigest;
+      try {
+        dictDigest = MessageDigest.getInstance("SHA-256");
+      } catch (NoSuchAlgorithmException e) {
+        throw new IOException("Couldn't digest brotli dictionary", e);
+      }
+
       int read;
-      byte[] tempBuffer = new byte[4 * 1024];
-      while ((read = dicIn.read(tempBuffer)) != -1) {
+      byte[] tempBuffer = new byte[8 * 1024];
+      while ((read = dictIn.read(tempBuffer)) != -1) {
         dictData.put(tempBuffer, 0, read);
         dictDigest.update(tempBuffer, 0, read);
       }
+
+      if (dictData.hasRemaining()) {
+        throw new EOFException("Incomplete dictionary");
+      }
+      if (!Arrays.equals(dictDigest.digest(), BROTLI_DICT_SHA_256)) {
+        throw new IOException("Corrupt dictionary");
+      }
     } catch (BufferOverflowException e) {
-      throw new IOException("too large dictionary");
-    }
-    if (dictData.hasRemaining()) {
-      throw new EOFException("incomplete dictionary");
-    }
-    if (!Arrays.equals(dictDigest.digest(), BROTLI_DICT_SHA_256)) {
-      throw new IOException("dictionary is corrupt");
+      throw new IOException("Too large dictionary");
     }
     return dictData;
   }
 
   LibEntry extractLibrary() throws IOException {
-    String libName = System.mapLibraryName(BASE_LIB_NAME);
-    String libPath = findLibraryPath(libName);
-    URL libUrl = BrotliLoader.class.getResource(libPath);
+    var libName = System.mapLibraryName(BASE_LIB_NAME);
+    var libPath = findLibraryPath(libName);
+    var libUrl = BrotliLoader.class.getResource(libPath);
     if (libUrl == null) {
-      throw new FileNotFoundException("couldn't find brotli jni library: " + libPath);
+      throw new FileNotFoundException("Couldn't find brotli jni library: " + libPath);
     }
     cleanStaleEntries(libName);
     return createLibEntry(libName, libUrl);
   }
 
   private void cleanStaleEntries(String libName) {
-    try (Stream<Path> entryDirs =
+    try (var entryDirs =
         Files.list(tempDir).filter(p -> p.getFileName().toString().startsWith(ENTRY_DIR_PREFIX))) {
       entryDirs.forEach(
           dir -> {
@@ -214,7 +211,7 @@ final class BrotliLoader {
 
   /** Retrieves the singleton instance of this loader. */
   static BrotliLoader instance() {
-    return LOADER;
+    return INSTANCE;
   }
 
   /** Represents a temp entry for the extracted library and it's lock file. */

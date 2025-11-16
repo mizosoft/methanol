@@ -1,24 +1,8 @@
-/*
- * Copyright (c) 2024 Moataz Hussein
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
+/* Copyright 2016 Google Inc. All Rights Reserved.
+
+   Distributed under MIT license.
+   See file LICENSE for detail or copy at https://opensource.org/licenses/MIT
+*/
 
 package com.github.mizosoft.methanol.brotli.internal;
 
@@ -36,7 +20,9 @@ class DecoderJNI {
 
   private static native void nativeDestroy(long[] context);
 
-  enum Status {
+  private static native boolean nativeAttachDictionary(long[] context, ByteBuffer dictionary);
+
+  public enum Status {
     ERROR,
     DONE,
     NEEDS_MORE_INPUT,
@@ -45,10 +31,10 @@ class DecoderJNI {
   }
 
   static class Wrapper {
-
     private final long[] context = new long[3];
     private final ByteBuffer inputBuffer;
     private Status lastStatus = Status.NEEDS_MORE_INPUT;
+    private boolean fresh = true;
 
     Wrapper(int inputBufferSize) throws IOException {
       this.context[1] = inputBufferSize;
@@ -56,6 +42,19 @@ class DecoderJNI {
       if (this.context[0] == 0) {
         throw new IOException("failed to initialize native brotli decoder");
       }
+    }
+
+    boolean attachDictionary(ByteBuffer dictionary) {
+      if (!dictionary.isDirect()) {
+        throw new IllegalArgumentException("only direct buffers allowed");
+      }
+      if (context[0] == 0) {
+        throw new IllegalStateException("brotli decoder is already destroyed");
+      }
+      if (!fresh) {
+        throw new IllegalStateException("decoding is already started");
+      }
+      return nativeAttachDictionary(context, dictionary);
     }
 
     void push(int length) {
@@ -71,6 +70,7 @@ class DecoderJNI {
       if (lastStatus == Status.OK && length != 0) {
         throw new IllegalStateException("pushing input to decoder in OK state");
       }
+      fresh = false;
       nativePush(context, length);
       parseStatus();
     }
@@ -109,6 +109,7 @@ class DecoderJNI {
       if (lastStatus != Status.NEEDS_MORE_OUTPUT && !hasOutput()) {
         throw new IllegalStateException("pulling output from decoder in " + lastStatus + " state");
       }
+      fresh = false;
       ByteBuffer result = nativePull(context);
       parseStatus();
       return result;

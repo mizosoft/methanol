@@ -26,7 +26,8 @@
  * @uses com.github.mizosoft.methanol.BodyDecoder.Factory
  * @uses com.github.mizosoft.methanol.BodyAdapter.Encoder
  * @uses com.github.mizosoft.methanol.BodyAdapter.Decoder
- * @provides com.github.mizosoft.methanol.BodyDecoder.Factory A factory for the gzip and deflate encodings
+ * @provides com.github.mizosoft.methanol.BodyDecoder.Factory A factory for the gzip and deflate
+ *     encodings
  */
 module methanol {
   requires transitive java.net.http;
@@ -56,7 +57,8 @@ module methanol {
       methanol.redis,
       methanol.testing,
       methanol.adapter.jaxb.jakarta,
-      methanol.adapter.jaxb;
+      methanol.adapter.jaxb,
+      methanol.brotli;
   exports com.github.mizosoft.methanol.internal.concurrent to
       methanol.adapter.jackson,
       methanol.redis,
