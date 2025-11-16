@@ -32,10 +32,10 @@ jobs:
             artifact-name: libbrotlijni.so
           - platform: windows-x86-64
             os: windows-latest
-            artifact-name: brotlijni.dll
+            artifact-name: Release/brotlijni.dll
           - platform: windows-aarch64
             os: windows-11-arm
-            artifact-name: brotlijni.dll
+            artifact-name: Release/brotlijni.dll
           - platform: macos-x86-64
             os: macos-15-intel
             artifact-name: libbrotlijni.dylib
@@ -52,13 +52,13 @@ jobs:
         if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == matrix.platform }}
         run: |
           cd methanol-brotli/native
-          cmake .
+          cmake -DCMAKE_BUILD_TYPE=Release .
 
       - name: Build
         if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == matrix.platform }}
         run: |
           cd methanol-brotli/native
-          cmake --build .
+          cmake --build . --config Release
 
       - name: Upload artifact
         if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == matrix.platform }}

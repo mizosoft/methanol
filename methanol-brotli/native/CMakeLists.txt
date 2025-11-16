@@ -67,8 +67,3 @@ else()
         SUFFIX ".so"
     )
 endif()
-
-#install(TARGETS brotlijni
- #   LIBRARY DESTINATION lib
- #   RUNTIME DESTINATION bin
-#)
