@@ -48,13 +48,6 @@ jobs:
         if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == matrix.platform }}
         uses: actions/checkout@v4
 
-      - name: Set up Java
-        if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == matrix.platform }}
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: ${{ env.BASE_JAVA }}
-
       - name: Configure CMake
         if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == matrix.platform }}
         run: |
