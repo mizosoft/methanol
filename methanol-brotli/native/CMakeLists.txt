@@ -44,7 +44,7 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
         -Wmissing-declarations
         -Wno-strict-aliasing
         -Wno-sign-conversion
-        -Wno-writable-strings
+        -Wno-write-strings
         -Wshadow
         -Wsign-compare
     )
