@@ -18,6 +18,11 @@ on:
           - windows-aarch64
           - macos-x86-64
           - macos-aarch64
+      create_pr:
+        type: boolean
+        description: 'Create Pull Request'
+        required: false
+        default: true
 
 jobs:
   build:
@@ -64,6 +69,28 @@ jobs:
         if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == matrix.platform }}
         uses: actions/upload-artifact@v4
         with:
-          name: brotli-${{ matrix.platform }}
+          name: ${{ matrix.platform }}
           path: methanol-brotli/native/${{ matrix.artifact-name }}
           if-no-files-found: error
+
+  commit-and-pr:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.create_pr }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: methanol-brotli/src/main/resources/native/
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: Update Brotli native libraries
+          branch: update-brotli-natives
+          delete-branch: true
+          title: "Update Brotli native libraries"
