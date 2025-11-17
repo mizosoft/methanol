@@ -4,13 +4,13 @@
    See file LICENSE for detail or copy at https://opensource.org/licenses/MIT
 */
 
-package com.github.mizosoft.methanol.brotli.internal;
+package com.github.mizosoft.methanol.brotli.internal.vendor;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /** JNI wrapper for brotli decoder. */
-class DecoderJNI {
+public class DecoderJNI {
 
   private static native ByteBuffer nativeCreate(long[] context);
 
@@ -30,13 +30,13 @@ class DecoderJNI {
     OK
   }
 
-  static class Wrapper {
+  public static class Wrapper {
     private final long[] context = new long[3];
     private final ByteBuffer inputBuffer;
     private Status lastStatus = Status.NEEDS_MORE_INPUT;
     private boolean fresh = true;
 
-    Wrapper(int inputBufferSize) throws IOException {
+    public Wrapper(int inputBufferSize) throws IOException {
       this.context[1] = inputBufferSize;
       this.inputBuffer = nativeCreate(this.context);
       if (this.context[0] == 0) {
@@ -44,7 +44,7 @@ class DecoderJNI {
       }
     }
 
-    boolean attachDictionary(ByteBuffer dictionary) {
+    public boolean attachDictionary(ByteBuffer dictionary) {
       if (!dictionary.isDirect()) {
         throw new IllegalArgumentException("only direct buffers allowed");
       }
@@ -57,7 +57,7 @@ class DecoderJNI {
       return nativeAttachDictionary(context, dictionary);
     }
 
-    void push(int length) {
+    public void push(int length) {
       if (length < 0) {
         throw new IllegalArgumentException("negative block length");
       }
@@ -75,7 +75,7 @@ class DecoderJNI {
       parseStatus();
     }
 
-    void parseStatus() {
+    private void parseStatus() {
       long status = context[1];
       if (status == 1) {
         lastStatus = Status.DONE;
@@ -90,19 +90,19 @@ class DecoderJNI {
       }
     }
 
-    Status getStatus() {
+    public Status getStatus() {
       return lastStatus;
     }
 
-    ByteBuffer getInputBuffer() {
+    public ByteBuffer getInputBuffer() {
       return inputBuffer;
     }
 
-    boolean hasOutput() {
+    public boolean hasOutput() {
       return context[2] != 0;
     }
 
-    ByteBuffer pull() {
+    public ByteBuffer pull() {
       if (context[0] == 0) {
         throw new IllegalStateException("brotli decoder is already destroyed");
       }
@@ -116,7 +116,7 @@ class DecoderJNI {
     }
 
     /** Releases native resources. */
-    void destroy() {
+    public void destroy() {
       if (context[0] == 0) {
         throw new IllegalStateException("brotli decoder is already destroyed");
       }

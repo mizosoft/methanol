@@ -25,38 +25,30 @@ package com.github.mizosoft.methanol.brotli.internal;
 import static com.github.mizosoft.methanol.brotli.internal.BrotliLoader.BASE_LIB_NAME;
 import static com.github.mizosoft.methanol.brotli.internal.BrotliLoader.ENTRY_DIR_PREFIX;
 import static com.github.mizosoft.methanol.testing.TestUtils.listFiles;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Set;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledOnOs;
-import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
-@DisabledOnOs(value = OS.MAC, architectures = "aarch64")
 class BrotliLoaderTest {
-
   @Test
   void entryCreation(@TempDir Path tempDir) throws IOException {
     new BrotliLoader(tempDir).extractLibrary();
 
     var libName = System.mapLibraryName(BASE_LIB_NAME);
     var createdEntries = listFiles(tempDir);
-    assertEquals(1, createdEntries.size(), createdEntries.toString());
+    assertThat(createdEntries).hasSize(1);
 
     var entry = createdEntries.get(0);
     var createdFiles = listFiles(entry);
-    assertEquals(2, createdFiles.size(), createdFiles.toString());
-
-    var expected = Set.of(entry.resolve(libName), entry.resolve(libName + ".lock"));
-    assertEquals(expected, Set.copyOf(createdFiles));
+    assertThat(createdFiles).hasSize(2);
+    assertThat(createdFiles)
+        .containsExactlyInAnyOrder(entry.resolve(libName), entry.resolve(libName + ".lock"));
   }
 
   @Test
@@ -74,25 +66,27 @@ class BrotliLoaderTest {
     new BrotliLoader(tempDir).extractLibrary();
 
     var entries = listFiles(tempDir);
-    assertEquals(3, entries.size(), entries.toString()); // (active, under creation, new)
-    assertFalse(entries.contains(staleEntry), entries.toString());
-    assertTrue(entries.containsAll(Set.of(activeEntry, entryUnderCreation)), entries.toString());
+    assertThat(entries).hasSize(3); // (active, under creation, new)
+    assertThat(entries).doesNotContain(staleEntry);
+    assertThat(entries).contains(activeEntry, entryUnderCreation);
   }
 
   @Test
   void corruptDictionary(@TempDir Path tempDir) {
     var loader = new BrotliLoader(tempDir, "/data/corrupt_dictionary.bin");
-    var ioe = assertThrows(IOException.class, loader::loadBrotliDictionary);
-    assertEquals(ioe.getMessage(), "dictionary is corrupt");
+    assertThatThrownBy(loader::ensureLoaded)
+        .isInstanceOf(IOException.class)
+        .hasMessage("Corrupt dictionary");
   }
 
   @Test
   void wrongDictionarySize(@TempDir Path tempDir) {
     var loader = new BrotliLoader(tempDir, "/data/truncated_dictionary.bin");
-    assertThrows(EOFException.class, loader::loadBrotliDictionary);
+    assertThatThrownBy(loader::ensureLoaded).isInstanceOf(EOFException.class);
 
     var loader2 = new BrotliLoader(tempDir, "/data/elongated_dictionary.bin");
-    var ioe = assertThrows(IOException.class, loader2::loadBrotliDictionary);
-    assertEquals(ioe.getMessage(), "too large dictionary");
+    assertThatThrownBy(loader2::loadBrotliDictionary)
+        .isInstanceOf(IOException.class)
+        .hasMessage("Too large dictionary");
   }
 }

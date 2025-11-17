@@ -15,19 +15,19 @@ extern "C" {
 static const JNINativeMethod kDecoderMethods[] = {
     {"nativeCreate", "([J)Ljava/nio/ByteBuffer;",
      reinterpret_cast<void*>(
-         Java_com_github_mizosoft_methanol_brotli_internal_DecoderJNI_nativeCreate)},
+         Java_com_github_mizosoft_methanol_brotli_internal_vendor_DecoderJNI_nativeCreate)},
     {"nativePush", "([JI)V",
      reinterpret_cast<void*>(
-         Java_com_github_mizosoft_methanol_brotli_internal_DecoderJNI_nativePush)},
+         Java_com_github_mizosoft_methanol_brotli_internal_vendor_DecoderJNI_nativePush)},
     {"nativePull", "([J)Ljava/nio/ByteBuffer;",
      reinterpret_cast<void*>(
-         Java_com_github_mizosoft_methanol_brotli_internal_DecoderJNI_nativePull)},
+         Java_com_github_mizosoft_methanol_brotli_internal_vendor_DecoderJNI_nativePull)},
     {"nativeDestroy", "([J)V",
      reinterpret_cast<void*>(
-         Java_com_github_mizosoft_methanol_brotli_internal_DecoderJNI_nativeDestroy)},
+         Java_com_github_mizosoft_methanol_brotli_internal_vendor_DecoderJNI_nativeDestroy)},
     {"nativeAttachDictionary", "([JLjava/nio/ByteBuffer;)Z",
      reinterpret_cast<void*>(
-         Java_com_github_mizosoft_methanol_brotli_internal_DecoderJNI_nativeAttachDictionary)}};
+         Java_com_github_mizosoft_methanol_brotli_internal_vendor_DecoderJNI_nativeAttachDictionary)}};
 
 JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* /*reserved*/) {
   JNIEnv* env;

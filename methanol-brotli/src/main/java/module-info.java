@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,7 @@
 module methanol.brotli {
   requires methanol;
   requires static org.checkerframework.checker.qual;
+  requires static com.google.errorprone.annotations;
 
   provides com.github.mizosoft.methanol.BodyDecoder.Factory with
       com.github.mizosoft.methanol.brotli.internal.BrotliBodyDecoderFactory;

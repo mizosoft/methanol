@@ -21,7 +21,7 @@ extern "C" {
  * @returns false if dictionary data was already set; otherwise true
  */
 JNIEXPORT jint JNICALL
-Java_com_github_mizosoft_methanol_brotli_internal_CommonJNI_nativeSetDictionaryData(
+Java_com_github_mizosoft_methanol_brotli_internal_vendor_CommonJNI_nativeSetDictionaryData(
     JNIEnv* env, jobject /*jobj*/, jobject buffer) {
   jobject buffer_ref = env->NewGlobalRef(buffer);
   if (!buffer_ref) {

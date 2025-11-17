@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,6 +21,8 @@
  */
 
 package com.github.mizosoft.methanol.brotli.internal;
+
+import com.github.mizosoft.methanol.brotli.internal.vendor.CommonJNI;
 
 import java.io.EOFException;
 import java.io.FileNotFoundException;
@@ -48,11 +50,11 @@ final class BrotliLoader {
   private static final String WINDOWS = "windows";
   private static final String MAC_OS = "macos";
 
-  // Maps arch path in jar to os.arch aliases
+  // Maps arch path in jar resources to os.arch aliases.
   private static final Map<String, Set<String>> ARCH_PATHS =
       Map.of(
-          "x86", Set.of("x86", "i386", "i486", "i586", "i686"),
-          "x86-64" /* '-' and not '_' is used in arch path */, Set.of("x86_64", "amd64"));
+          "x86-64", Set.of("x86_64", "amd64"),
+          "aarch64", Set.of("arm64", "aarch64"));
 
   static final String BASE_LIB_NAME = "brotlijni";
   static final String ENTRY_DIR_PREFIX = BrotliLoader.class.getName() + "-";
@@ -104,8 +106,8 @@ final class BrotliLoader {
   }
 
   ByteBuffer loadBrotliDictionary() throws IOException {
-    // The buffer must be direct as the native address is directory passed to
-    // BrotliSetDictionaryData from the JNI side
+    // The buffer must be direct as the native address is directly passed to
+    // BrotliSetDictionaryData from the JNI side.
     var dictData = ByteBuffer.allocateDirect(BROTLI_DICT_SIZE);
     try (var dictIn = BrotliLoader.class.getResourceAsStream(dictionaryPath)) {
       if (dictIn == null) {
@@ -140,7 +142,7 @@ final class BrotliLoader {
 
   LibEntry extractLibrary() throws IOException {
     var libName = System.mapLibraryName(BASE_LIB_NAME);
-    var libPath = findLibraryPath(libName);
+    var libPath = getLibraryPath(libName);
     var libUrl = BrotliLoader.class.getResource(libPath);
     if (libUrl == null) {
       throw new FileNotFoundException("Couldn't find brotli jni library: " + libPath);
@@ -154,24 +156,24 @@ final class BrotliLoader {
         Files.list(tempDir).filter(p -> p.getFileName().toString().startsWith(ENTRY_DIR_PREFIX))) {
       entryDirs.forEach(
           dir -> {
-            LibEntry entry = new LibEntry(dir, libName);
+            var entry = new LibEntry(dir, libName);
             if (entry.isStale()) {
               try {
                 entry.deleteIfExists();
               } catch (IOException ioe) {
-                logger.log(Level.WARNING, "couldn't delete stale entry: " + dir, ioe);
+                logger.log(Level.WARNING, "Couldn't delete stale entry: " + dir, ioe);
               }
             }
           });
     } catch (IOException ioe) {
-      logger.log(Level.WARNING, "couldn't perform cleanup routine for stale entries", ioe);
+      logger.log(Level.WARNING, "Couldn't perform cleanup routine for stale entries", ioe);
     }
   }
 
   private LibEntry createLibEntry(String libName, URL libUrl) throws IOException {
-    Path entryDir = Files.createTempDirectory(tempDir, ENTRY_DIR_PREFIX);
-    LibEntry entry = new LibEntry(entryDir, libName);
-    try (InputStream libIn = libUrl.openStream()) {
+    var entryDir = Files.createTempDirectory(tempDir, ENTRY_DIR_PREFIX);
+    var entry = new LibEntry(entryDir, libName);
+    try (var libIn = libUrl.openStream()) {
       entry.create(libIn);
     } catch (IOException ioe) {
       try {
@@ -184,10 +186,10 @@ final class BrotliLoader {
     return entry;
   }
 
-  private static String findLibraryPath(String libName) {
-    String normalizedOs = normalizeOs(System.getProperty("os.name").toLowerCase(Locale.ROOT));
-    String normalizedArch = normalizeArch(System.getProperty("os.arch").toLowerCase(Locale.ROOT));
-    return String.format("/%s/%s/%s/%s", LIB_ROOT, normalizedOs, normalizedArch, libName);
+  private static String getLibraryPath(String libName) {
+    var normalizedOs = normalizeOs(System.getProperty("os.name").toLowerCase(Locale.ROOT));
+    var normalizedArch = normalizeArch(System.getProperty("os.arch").toLowerCase(Locale.ROOT));
+    return String.format("/%s/%s-%s/%s", LIB_ROOT, normalizedOs, normalizedArch, libName);
   }
 
   private static String normalizeOs(String os) {
@@ -195,10 +197,13 @@ final class BrotliLoader {
       return LINUX;
     } else if (os.contains("windows")) {
       return WINDOWS;
-    } else if (os.contains("mac os x") || os.contains("darwin") || os.contains("osx")) {
+    } else if (os.contains("macos")
+        || os.contains("mac os x")
+        || os.contains("darwin")
+        || os.contains("osx")) {
       return MAC_OS;
     }
-    throw new UnsupportedOperationException("unrecognized OS: " + os);
+    throw new UnsupportedOperationException("Unrecognized OS: " + os);
   }
 
   private static String normalizeArch(String arch) {
@@ -206,7 +211,7 @@ final class BrotliLoader {
         .filter(e -> e.getValue().contains(arch))
         .findFirst()
         .map(Map.Entry::getKey)
-        .orElseThrow(() -> new UnsupportedOperationException("unrecognized architecture: " + arch));
+        .orElseThrow(() -> new UnsupportedOperationException("Unrecognized architecture: " + arch));
   }
 
   /** Retrieves the singleton instance of this loader. */
@@ -216,20 +221,19 @@ final class BrotliLoader {
 
   /** Represents a temp entry for the extracted library and it's lock file. */
   private static final class LibEntry {
-
     private final Path dir;
     private final Path lockFile;
     private final Path libFile;
 
     LibEntry(Path dir, String libName) {
       this.dir = dir;
-      lockFile = dir.resolve(libName + ".lock");
-      libFile = dir.resolve(libName);
+      this.lockFile = dir.resolve(libName + ".lock");
+      this.libFile = dir.resolve(libName);
     }
 
     void create(InputStream libIn) throws IOException {
-      // lockFile must be created first to not erroneously report staleness
-      // to other instances in between libFile creation and lockFile creation
+      // lockFile must be created first to not erroneously report staleness to other instances in
+      // between libFile creation and lockFile creation.
       Files.createFile(lockFile);
       Files.copy(libIn, libFile);
     }
@@ -248,16 +252,15 @@ final class BrotliLoader {
                     try {
                       deleteIfExists();
                     } catch (IOException ignored) {
-                      // An AccessDeniedException will ALWAYS be thrown
-                      // in windows so it might be annoying to log it
+                      // An AccessDeniedException will ALWAYS be thrown in Windows.
                     }
                   }));
     }
 
     boolean isStale() {
-      // Staleness is only reported on a "complete" entry (has the lib file and possibly
-      // the lock file). This is because entry creation is not atomic, so care must
-      // be taken to not delete an entry that is still under creation (still empty)
+      // Staleness is only reported on a "complete" entry (has the lib file and possibly the lock
+      // file). This is because entry creation is not atomic, so care must be taken to not delete an
+      // entry that is still under creation (still empty)
       return Files.notExists(lockFile) && Files.exists(libFile);
     }
 

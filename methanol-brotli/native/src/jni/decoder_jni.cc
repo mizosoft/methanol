@@ -49,7 +49,7 @@ extern "C" {
  * @returns direct ByteBuffer if directBufferSize is not 0; otherwise null
  */
 JNIEXPORT jobject JNICALL
-Java_com_github_mizosoft_methanol_brotli_internal_DecoderJNI_nativeCreate(
+Java_com_github_mizosoft_methanol_brotli_internal_vendor_DecoderJNI_nativeCreate(
     JNIEnv* env, jobject /*jobj*/, jlongArray ctx) {
   bool ok = true;
   DecoderHandle* handle = nullptr;
@@ -119,7 +119,7 @@ Java_com_github_mizosoft_methanol_brotli_internal_DecoderJNI_nativeCreate(
  *                     0 to process further previous input
  */
 JNIEXPORT void JNICALL
-Java_com_github_mizosoft_methanol_brotli_internal_DecoderJNI_nativePush(
+Java_com_github_mizosoft_methanol_brotli_internal_vendor_DecoderJNI_nativePush(
     JNIEnv* env, jobject /*jobj*/, jlongArray ctx, jint input_length) {
   jlong context[3];
   env->GetLongArrayRegion(ctx, 0, 3, context);
@@ -174,7 +174,7 @@ Java_com_github_mizosoft_methanol_brotli_internal_DecoderJNI_nativePush(
  *          any further invocation; null in case of error
  */
 JNIEXPORT jobject JNICALL
-Java_com_github_mizosoft_methanol_brotli_internal_DecoderJNI_nativePull(
+Java_com_github_mizosoft_methanol_brotli_internal_vendor_DecoderJNI_nativePull(
     JNIEnv* env, jobject /*jobj*/, jlongArray ctx) {
   jlong context[3];
   env->GetLongArrayRegion(ctx, 0, 3, context);
@@ -202,7 +202,7 @@ Java_com_github_mizosoft_methanol_brotli_internal_DecoderJNI_nativePull(
  * @param ctx {in_cookie} tuple
  */
 JNIEXPORT void JNICALL
-Java_com_github_mizosoft_methanol_brotli_internal_DecoderJNI_nativeDestroy(
+Java_com_github_mizosoft_methanol_brotli_internal_vendor_DecoderJNI_nativeDestroy(
     JNIEnv* env, jobject /*jobj*/, jlongArray ctx) {
   jlong context[3];
   env->GetLongArrayRegion(ctx, 0, 3, context);
@@ -216,7 +216,7 @@ Java_com_github_mizosoft_methanol_brotli_internal_DecoderJNI_nativeDestroy(
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_github_mizosoft_methanol_brotli_internal_DecoderJNI_nativeAttachDictionary(
+Java_com_github_mizosoft_methanol_brotli_internal_vendor_DecoderJNI_nativeAttachDictionary(
     JNIEnv* env, jobject /*jobj*/, jlongArray ctx, jobject dictionary) {
   jlong context[3];
   env->GetLongArrayRegion(ctx, 0, 3, context);

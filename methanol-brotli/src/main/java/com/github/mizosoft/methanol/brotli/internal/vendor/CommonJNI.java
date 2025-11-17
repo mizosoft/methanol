@@ -4,7 +4,7 @@
    See file LICENSE for detail or copy at https://opensource.org/licenses/MIT
 */
 
-package com.github.mizosoft.methanol.brotli.internal;
+package com.github.mizosoft.methanol.brotli.internal.vendor;
 
 import java.nio.ByteBuffer;
 
