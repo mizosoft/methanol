@@ -29,10 +29,10 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.net.URL;
-import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,6 +40,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Locale;
+import java.util.Optional;
 
 /** Helper class for loading brotli JNI and setting the bundled dictionary. */
 final class BrotliLoader {
@@ -49,8 +50,16 @@ final class BrotliLoader {
   private static final String WINDOWS = "windows";
   private static final String MAC_OS = "macos";
 
+  static final String WORKSPACE_DIR_NAME =
+      BrotliLoader.class.getName()
+          + "@"
+          + Optional.ofNullable(BrotliLoader.class.getModule().getDescriptor())
+              .map(d -> d.version().toString())
+              .orElse("<unknown>");
   static final String BASE_LIB_NAME = "brotlijni";
-  static final String ENTRY_DIR_PREFIX = BrotliLoader.class.getName() + "-";
+  static final String ENTRY_DIR_PREFIX = "entry-";
+  static final String LOCK_FILE_NAME = ".lock";
+
   private static final String LIB_ROOT = "native";
   private static final String DEFAULT_DICTIONARY_PATH = "/data/dictionary.bin";
 
@@ -61,7 +70,7 @@ final class BrotliLoader {
         104, 119, -40, -50, 123, 58, -127, 127, 55, -113, 49, 54, 83, -13, 92, 112
       };
 
-  private static final Lazy<IOException> load =
+  private static final Lazy<Boolean> load =
       Lazy.of(
           () -> {
             try {
@@ -71,13 +80,13 @@ final class BrotliLoader {
                               "com.github.mizosoft.methanol.brotli.tmpdir",
                               System.getProperty("java.io.tmpdir"))))
                   .load();
-              return null;
+              return true;
             } catch (IOException e) {
-              return e;
+              throw new UncheckedIOException(e);
             }
           });
 
-  private final Path tempDir;
+  private final Path workspaceDir;
   private final String dictionaryPath;
 
   BrotliLoader(Path tempDir) {
@@ -85,7 +94,7 @@ final class BrotliLoader {
   }
 
   BrotliLoader(Path tempDir, String dictionaryPath) {
-    this.tempDir = tempDir;
+    this.workspaceDir = tempDir.resolve(WORKSPACE_DIR_NAME);
     this.dictionaryPath = dictionaryPath;
   }
 
@@ -118,6 +127,10 @@ final class BrotliLoader {
       int read;
       byte[] tempBuffer = new byte[8 * 1024];
       while ((read = dictIn.read(tempBuffer)) != -1) {
+        if (dictData.remaining() < read) {
+          throw new IOException("Too large dictionary");
+        }
+
         dictData.put(tempBuffer, 0, read);
         dictDigest.update(tempBuffer, 0, read);
       }
@@ -128,13 +141,14 @@ final class BrotliLoader {
       if (!Arrays.equals(dictDigest.digest(), BROTLI_DICT_SHA_256)) {
         throw new IOException("Corrupt dictionary");
       }
-    } catch (BufferOverflowException e) {
-      throw new IOException("Too large dictionary");
     }
     return dictData;
   }
 
   LibEntry extractLibrary() throws IOException {
+    // Ensure workspaceDir exists.
+    Files.createDirectories(workspaceDir);
+
     var libName = System.mapLibraryName(BASE_LIB_NAME);
     var libPath = getLibraryPath(libName);
     var libUrl = BrotliLoader.class.getResource(libPath);
@@ -147,13 +161,14 @@ final class BrotliLoader {
 
   private void cleanStaleEntries(String libName) {
     try (var entryDirs =
-        Files.list(tempDir).filter(p -> p.getFileName().toString().startsWith(ENTRY_DIR_PREFIX))) {
+        Files.list(workspaceDir)
+            .filter(p -> p.getFileName().toString().startsWith(ENTRY_DIR_PREFIX))) {
       entryDirs.forEach(
           dir -> {
             var entry = new LibEntry(dir, libName);
             if (entry.isStale()) {
               try {
-                entry.deleteIfExists();
+                entry.delete();
               } catch (IOException ioe) {
                 logger.log(Level.WARNING, "Couldn't delete stale entry: " + dir, ioe);
               }
@@ -165,13 +180,12 @@ final class BrotliLoader {
   }
 
   private LibEntry createLibEntry(String libName, URL libUrl) throws IOException {
-    var entryDir = Files.createTempDirectory(tempDir, ENTRY_DIR_PREFIX);
-    var entry = new LibEntry(entryDir, libName);
+    var entry = new LibEntry(Files.createTempDirectory(workspaceDir, ENTRY_DIR_PREFIX), libName);
     try (var libIn = libUrl.openStream()) {
       entry.create(libIn);
     } catch (IOException ioe) {
       try {
-        entry.deleteIfExists();
+        entry.delete();
       } catch (IOException suppressed) {
         ioe.addSuppressed(suppressed);
       }
@@ -211,9 +225,10 @@ final class BrotliLoader {
 
   /** Ensures that the native brotli library is loaded. */
   static void ensureLoaded() throws IOException {
-    var ioe = load.get();
-    if (ioe != null) {
-      throw ioe;
+    try {
+      load.get();
+    } catch (UncheckedIOException e) {
+      throw e.getCause();
     }
   }
 
@@ -225,7 +240,7 @@ final class BrotliLoader {
 
     LibEntry(Path dir, String libName) {
       this.dir = dir;
-      this.lockFile = dir.resolve(libName + ".lock");
+      this.lockFile = dir.resolve(LOCK_FILE_NAME);
       this.libFile = dir.resolve(libName);
     }
 
@@ -236,7 +251,7 @@ final class BrotliLoader {
       Files.copy(libIn, libFile);
     }
 
-    void deleteIfExists() throws IOException {
+    void delete() throws IOException {
       Files.deleteIfExists(lockFile);
       Files.deleteIfExists(libFile);
       Files.deleteIfExists(dir);
@@ -248,7 +263,7 @@ final class BrotliLoader {
               new Thread(
                   () -> {
                     try {
-                      deleteIfExists();
+                      delete();
                     } catch (IOException ignored) {
                       // An AccessDeniedException will ALWAYS be thrown in Windows.
                     }

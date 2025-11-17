@@ -24,6 +24,8 @@ package com.github.mizosoft.methanol.brotli.internal;
 
 import static com.github.mizosoft.methanol.brotli.internal.BrotliLoader.BASE_LIB_NAME;
 import static com.github.mizosoft.methanol.brotli.internal.BrotliLoader.ENTRY_DIR_PREFIX;
+import static com.github.mizosoft.methanol.brotli.internal.BrotliLoader.LOCK_FILE_NAME;
+import static com.github.mizosoft.methanol.brotli.internal.BrotliLoader.WORKSPACE_DIR_NAME;
 import static com.github.mizosoft.methanol.testing.TestUtils.listFiles;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -41,31 +43,35 @@ class BrotliLoaderTest {
     new BrotliLoader(tempDir).extractLibrary();
 
     var libName = System.mapLibraryName(BASE_LIB_NAME);
-    var createdEntries = listFiles(tempDir);
+    var createdEntries = listFiles(tempDir.resolve(WORKSPACE_DIR_NAME));
     assertThat(createdEntries).hasSize(1);
 
     var entry = createdEntries.get(0);
     var createdFiles = listFiles(entry);
     assertThat(createdFiles).hasSize(2);
     assertThat(createdFiles)
-        .containsExactlyInAnyOrder(entry.resolve(libName), entry.resolve(libName + ".lock"));
+        .containsExactlyInAnyOrder(entry.resolve(libName), entry.resolve(LOCK_FILE_NAME));
   }
 
   @Test
   void cleanupRoutine(@TempDir Path tempDir) throws IOException {
     var libName = System.mapLibraryName(BASE_LIB_NAME);
-    var staleEntry = Files.createDirectory(tempDir.resolve(ENTRY_DIR_PREFIX + "stale"));
-    var activeEntry = Files.createDirectories(tempDir.resolve(ENTRY_DIR_PREFIX + "active"));
-    Files.createFile(staleEntry.resolve(libName)); // Stale entry has only the lib file.
-    Files.createFile(activeEntry.resolve(libName)); // Active entry has both lib and lock files.
-    Files.createFile(activeEntry.resolve(libName + ".lock"));
+    var workspaceDir = Files.createDirectories(tempDir.resolve(WORKSPACE_DIR_NAME));
+    var staleEntry = Files.createDirectory(workspaceDir.resolve(ENTRY_DIR_PREFIX + "stale"));
+    var activeEntry = Files.createDirectories(workspaceDir.resolve(ENTRY_DIR_PREFIX + "active"));
 
-    var entryUnderCreation =
-        Files.createDirectory(tempDir.resolve(ENTRY_DIR_PREFIX + "underCreation"));
+    // Stale entry has only the lib file.
+    Files.createFile(staleEntry.resolve(libName));
+
+    // Active entry has both lib and lock files.
+    Files.createFile(activeEntry.resolve(libName));
+    Files.createFile(activeEntry.resolve(LOCK_FILE_NAME));
+
+    var entryUnderCreation = Files.createDirectory(workspaceDir.resolve("underCreation"));
 
     new BrotliLoader(tempDir).extractLibrary();
 
-    var entries = listFiles(tempDir);
+    var entries = listFiles(workspaceDir);
     assertThat(entries).hasSize(3); // (active, under creation, new)
     assertThat(entries).doesNotContain(staleEntry);
     assertThat(entries).contains(activeEntry, entryUnderCreation);
