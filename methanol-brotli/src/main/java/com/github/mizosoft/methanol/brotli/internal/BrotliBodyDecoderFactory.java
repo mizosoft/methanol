@@ -40,7 +40,7 @@ public final class BrotliBodyDecoderFactory implements BodyDecoder.Factory {
    * @throws UnsupportedOperationException if the current machine is not recognized
    */
   public BrotliBodyDecoderFactory() throws IOException {
-    BrotliLoader.instance().ensureLoaded();
+    BrotliLoader.ensureLoaded();
   }
 
   @Override

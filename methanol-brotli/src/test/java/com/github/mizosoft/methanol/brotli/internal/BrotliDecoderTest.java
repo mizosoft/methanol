@@ -49,7 +49,7 @@ class BrotliDecoderTest {
 
   @BeforeAll
   static void loadBrotli() throws IOException {
-    BrotliLoader.instance().ensureLoaded();
+    BrotliLoader.ensureLoaded();
   }
 
   @Test

@@ -23,6 +23,7 @@
 package com.github.mizosoft.methanol.brotli.internal;
 
 import com.github.mizosoft.methanol.brotli.internal.vendor.CommonJNI;
+import com.github.mizosoft.methanol.internal.concurrent.Lazy;
 
 import java.io.EOFException;
 import java.io.FileNotFoundException;
@@ -39,22 +40,14 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
 
-/** Helper class for loading brotli JNI and setting bundled dictionary. */
+/** Helper class for loading brotli JNI and setting the bundled dictionary. */
 final class BrotliLoader {
   private static final Logger logger = System.getLogger(BrotliLoader.class.getName());
 
   private static final String LINUX = "linux";
   private static final String WINDOWS = "windows";
   private static final String MAC_OS = "macos";
-
-  // Maps arch path in jar resources to os.arch aliases.
-  private static final Map<String, Set<String>> ARCH_PATHS =
-      Map.of(
-          "x86-64", Set.of("x86_64", "amd64"),
-          "aarch64", Set.of("arm64", "aarch64"));
 
   static final String BASE_LIB_NAME = "brotlijni";
   static final String ENTRY_DIR_PREFIX = BrotliLoader.class.getName() + "-";
@@ -68,16 +61,24 @@ final class BrotliLoader {
         104, 119, -40, -50, 123, 58, -127, 127, 55, -113, 49, 54, 83, -13, 92, 112
       };
 
-  private static final BrotliLoader INSTANCE =
-      new BrotliLoader(
-          Path.of(
-              System.getProperty(
-                  "com.github.mizosoft.methanol.brotli.tmpdir",
-                  System.getProperty("java.io.tmpdir"))));
+  private static final Lazy<IOException> load =
+      Lazy.of(
+          () -> {
+            try {
+              new BrotliLoader(
+                      Path.of(
+                          System.getProperty(
+                              "com.github.mizosoft.methanol.brotli.tmpdir",
+                              System.getProperty("java.io.tmpdir"))))
+                  .load();
+              return null;
+            } catch (IOException e) {
+              return e;
+            }
+          });
 
   private final Path tempDir;
   private final String dictionaryPath;
-  private volatile boolean loaded;
 
   BrotliLoader(Path tempDir) {
     this(tempDir, DEFAULT_DICTIONARY_PATH);
@@ -88,20 +89,13 @@ final class BrotliLoader {
     this.dictionaryPath = dictionaryPath;
   }
 
-  void ensureLoaded() throws IOException {
-    if (!loaded) {
-      synchronized (this) {
-        if (!loaded) {
-          var dictionary = loadBrotliDictionary();
-          var entry = extractLibrary();
-          entry.deleteOnExit();
-          entry.loadLibrary();
-          if (!CommonJNI.nativeSetDictionaryData(dictionary)) {
-            throw new IOException("failed to set brotli dictionary");
-          }
-          loaded = true;
-        }
-      }
+  void load() throws IOException {
+    var dictionary = loadBrotliDictionary();
+    var entry = extractLibrary();
+    entry.deleteOnExit();
+    entry.loadLibrary();
+    if (!CommonJNI.nativeSetDictionaryData(dictionary)) {
+      throw new IOException("Failed to set brotli dictionary");
     }
   }
 
@@ -207,19 +201,23 @@ final class BrotliLoader {
   }
 
   private static String normalizeArch(String arch) {
-    return ARCH_PATHS.entrySet().stream()
-        .filter(e -> e.getValue().contains(arch))
-        .findFirst()
-        .map(Map.Entry::getKey)
-        .orElseThrow(() -> new UnsupportedOperationException("Unrecognized architecture: " + arch));
+    if (arch.contains("x86-64") || arch.contains("amd64")) {
+      return "x86-64";
+    } else if (arch.contains("aarch64") || arch.contains("arm64")) {
+      return "aarch64";
+    }
+    throw new UnsupportedOperationException("Unrecognized architecture: " + arch);
   }
 
-  /** Retrieves the singleton instance of this loader. */
-  static BrotliLoader instance() {
-    return INSTANCE;
+  /** Ensures that the native brotli library is loaded. */
+  static void ensureLoaded() throws IOException {
+    var ioe = load.get();
+    if (ioe != null) {
+      throw ioe;
+    }
   }
 
-  /** Represents a temp entry for the extracted library and it's lock file. */
+  /** Represents a temp entry for the extracted library and its lock file. */
   private static final class LibEntry {
     private final Path dir;
     private final Path lockFile;

@@ -74,7 +74,7 @@ class BrotliLoaderTest {
   @Test
   void corruptDictionary(@TempDir Path tempDir) {
     var loader = new BrotliLoader(tempDir, "/data/corrupt_dictionary.bin");
-    assertThatThrownBy(loader::ensureLoaded)
+    assertThatThrownBy(loader::load)
         .isInstanceOf(IOException.class)
         .hasMessage("Corrupt dictionary");
   }
@@ -82,7 +82,7 @@ class BrotliLoaderTest {
   @Test
   void wrongDictionarySize(@TempDir Path tempDir) {
     var loader = new BrotliLoader(tempDir, "/data/truncated_dictionary.bin");
-    assertThatThrownBy(loader::ensureLoaded).isInstanceOf(EOFException.class);
+    assertThatThrownBy(loader::load).isInstanceOf(EOFException.class);
 
     var loader2 = new BrotliLoader(tempDir, "/data/elongated_dictionary.bin");
     assertThatThrownBy(loader2::loadBrotliDictionary)
