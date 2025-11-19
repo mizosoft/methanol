@@ -40,22 +40,18 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Locale;
-import java.util.Optional;
 
 /** Helper class for loading brotli JNI and setting the bundled dictionary. */
 final class BrotliLoader {
+  private static final long VERSION = 1;
+
   private static final Logger logger = System.getLogger(BrotliLoader.class.getName());
 
   private static final String LINUX = "linux";
   private static final String WINDOWS = "windows";
   private static final String MAC_OS = "macos";
 
-  static final String WORKSPACE_DIR_NAME =
-      BrotliLoader.class.getName()
-          + "@"
-          + Optional.ofNullable(BrotliLoader.class.getModule().getDescriptor())
-              .map(d -> d.version().toString())
-              .orElse("<unknown>");
+  static final String WORKSPACE_DIR_NAME = BrotliLoader.class.getName() + "@" + VERSION;
   static final String BASE_LIB_NAME = "brotlijni";
   static final String ENTRY_DIR_PREFIX = "entry-";
   static final String LOCK_FILE_NAME = ".lock";
