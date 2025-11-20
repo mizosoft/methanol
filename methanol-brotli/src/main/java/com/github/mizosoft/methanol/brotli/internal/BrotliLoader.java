@@ -211,7 +211,7 @@ final class BrotliLoader {
   }
 
   private static String normalizeArch(String arch) {
-    if (arch.contains("x86-64") || arch.contains("amd64")) {
+    if (arch.contains("x86-64") || arch.contains("x86_64") || arch.contains("amd64")) {
       return "x86-64";
     } else if (arch.contains("aarch64") || arch.contains("arm64")) {
       return "aarch64";
