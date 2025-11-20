@@ -17,13 +17,17 @@ include("methanol-blackbox")
 include("methanol-benchmarks")
 include("methanol-samples")
 include("methanol-samples:crawler")
-include("methanol-samples:download-progress")
-include("methanol-samples:upload-progress")
 include("methanol-samples:kotlin")
 include("spring-boot-test")
 include("methanol-redis")
 include("methanol-kotlin")
 include("methanol-moshi")
+
+// Include JavaFX samples on supported platforms only.
+if (!(org.gradle.internal.os.OperatingSystem.current().isWindows && System.getProperty("os.arch") == "aarch64")) {
+  include("methanol-samples:download-progress")
+  include("methanol-samples:upload-progress")
+}
 
 // Load local properties while giving precedence to properties defined through CLI.
 try {
