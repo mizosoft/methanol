@@ -1,5 +1,5 @@
 import java.io.FileNotFoundException
-import java.util.*
+import java.util.Properties
 
 rootProject.name = "methanol-parent"
 
