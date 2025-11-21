@@ -20,18 +20,16 @@ java {
   }
 }
 
-tasks.compileJava {
+tasks.withType<JavaCompile> {
   options.apply {
     javaModuleVersion = provider { project.version.toString() }
-    release = 11
 
     // Suppress warnings when exporting to modules unresolvable on separate compilation.
     compilerArgs.add("-Xlint:-module")
-  }
-}
 
-tasks.withType<JavaCompile> {
-  options.encoding = StandardCharsets.UTF_8.name()
+    release = 11
+    encoding = StandardCharsets.UTF_8.name()
+  }
 }
 
 tasks.withType<Javadoc> {
