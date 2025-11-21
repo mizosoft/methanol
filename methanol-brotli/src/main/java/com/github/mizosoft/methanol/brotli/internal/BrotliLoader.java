@@ -121,8 +121,8 @@ final class BrotliLoader {
         var libFile = Path.of(libraryPath).resolve(System.mapLibraryName(BASE_LIB_NAME));
         libLoader.load(libFile.toAbsolutePath().toString());
         logger.log(Level.INFO, "Loaded %s library from custom path <%s>", BASE_LIB_NAME, libFile);
+        return;
       } catch (UnsatisfiedLinkError ignored) {
-        // Try
       }
     }
 
@@ -130,6 +130,7 @@ final class BrotliLoader {
     try {
       libLoader.loadLibrary(BASE_LIB_NAME);
       logger.log(Level.INFO, "Loaded %s library from java.library.path", BASE_LIB_NAME);
+      return;
     } catch (UnsatisfiedLinkError ignored) {
     }
 
