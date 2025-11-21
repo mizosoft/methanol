@@ -41,6 +41,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Locale;
 
+import static java.util.Objects.requireNonNull;
+
 /** Helper class for loading brotli JNI and setting the bundled dictionary. */
 final class BrotliLoader {
   private static final long VERSION = 1;
@@ -55,6 +57,9 @@ final class BrotliLoader {
   static final String BASE_LIB_NAME = "brotlijni";
   static final String ENTRY_DIR_PREFIX = "entry-";
   static final String LOCK_FILE_NAME = ".lock";
+
+  private static final String LIBRARY_PATH_PROPERTY =
+      "com.github.mizosoft.methanol.brotli.libraryPath";
 
   private static final String LIB_ROOT = "native";
   private static final String DEFAULT_DICTIONARY_PATH = "/data/dictionary.bin";
@@ -84,24 +89,55 @@ final class BrotliLoader {
 
   private final Path workspaceDir;
   private final String dictionaryPath;
+  private final LibLoader libLoader;
 
   BrotliLoader(Path tempDir) {
     this(tempDir, DEFAULT_DICTIONARY_PATH);
   }
 
   BrotliLoader(Path tempDir, String dictionaryPath) {
+    this(tempDir, dictionaryPath, LibLoader.SystemLibLoader.INSTANCE);
+  }
+
+  BrotliLoader(Path tempDir, String dictionaryPath, LibLoader libLoader) {
     this.workspaceDir = tempDir.resolve(WORKSPACE_DIR_NAME);
     this.dictionaryPath = dictionaryPath;
+    this.libLoader = libLoader;
   }
 
   void load() throws IOException {
     var dictionary = loadBrotliDictionary();
-    var entry = extractLibrary();
-    entry.deleteOnExit();
-    entry.loadLibrary();
+    loadLibrary();
     if (!CommonJNI.nativeSetDictionaryData(dictionary)) {
       throw new IOException("Failed to set brotli dictionary");
     }
+  }
+
+  void loadLibrary() throws IOException {
+    // Try custom directory path.
+    var libraryPath = System.getProperty(LIBRARY_PATH_PROPERTY);
+    if (libraryPath != null) {
+      try {
+        var libFile = Path.of(libraryPath).resolve(System.mapLibraryName(BASE_LIB_NAME));
+        libLoader.load(libFile.toAbsolutePath().toString());
+        logger.log(Level.INFO, "Loaded %s library from custom path <%s>", BASE_LIB_NAME, libFile);
+      } catch (UnsatisfiedLinkError ignored) {
+        // Try
+      }
+    }
+
+    // Try java.library.path.
+    try {
+      libLoader.loadLibrary(BASE_LIB_NAME);
+      logger.log(Level.INFO, "Loaded %s library from java.library.path", BASE_LIB_NAME);
+    } catch (UnsatisfiedLinkError ignored) {
+    }
+
+    // Try JAR-bundled libraries.
+    var entry = extractLibrary();
+    entry.deleteOnExit();
+    entry.loadLibrary();
+    logger.log(Level.INFO, "Loaded %s library from JAR resources", BASE_LIB_NAME);
   }
 
   ByteBuffer loadBrotliDictionary() throws IOException {
@@ -149,7 +185,8 @@ final class BrotliLoader {
     var libPath = getLibraryPath(libName);
     var libUrl = BrotliLoader.class.getResource(libPath);
     if (libUrl == null) {
-      throw new FileNotFoundException("Couldn't find brotli jni library: " + libPath);
+      throw new FileNotFoundException(
+          String.format("Couldn't find %s library in <%s>", BASE_LIB_NAME, libPath));
     }
     cleanStaleEntries(libName);
     return createLibEntry(libName, libUrl);
@@ -161,7 +198,7 @@ final class BrotliLoader {
             .filter(p -> p.getFileName().toString().startsWith(ENTRY_DIR_PREFIX))) {
       entryDirs.forEach(
           dir -> {
-            var entry = new LibEntry(dir, libName);
+            var entry = new LibEntry(dir, libName, libLoader);
             if (entry.isStale()) {
               try {
                 entry.delete();
@@ -176,7 +213,8 @@ final class BrotliLoader {
   }
 
   private LibEntry createLibEntry(String libName, URL libUrl) throws IOException {
-    var entry = new LibEntry(Files.createTempDirectory(workspaceDir, ENTRY_DIR_PREFIX), libName);
+    var entry =
+        new LibEntry(Files.createTempDirectory(workspaceDir, ENTRY_DIR_PREFIX), libName, libLoader);
     try (var libIn = libUrl.openStream()) {
       entry.create(libIn);
     } catch (IOException ioe) {
@@ -233,11 +271,13 @@ final class BrotliLoader {
     private final Path dir;
     private final Path lockFile;
     private final Path libFile;
+    private final LibLoader libLoader;
 
-    LibEntry(Path dir, String libName) {
+    LibEntry(Path dir, String libName, LibLoader libLoader) {
       this.dir = dir;
       this.lockFile = dir.resolve(LOCK_FILE_NAME);
       this.libFile = dir.resolve(libName);
+      this.libLoader = requireNonNull(libLoader);
     }
 
     void create(InputStream libIn) throws IOException {
@@ -274,7 +314,7 @@ final class BrotliLoader {
     }
 
     void loadLibrary() {
-      System.load(libFile.toAbsolutePath().toString());
+      libLoader.load(libFile.toAbsolutePath().toString());
     }
   }
 }

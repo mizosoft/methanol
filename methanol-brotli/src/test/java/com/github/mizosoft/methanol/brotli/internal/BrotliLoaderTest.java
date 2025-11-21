@@ -34,10 +34,13 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class BrotliLoaderTest {
+  private static final String DEFAULT_DICTIONARY_PATH = "/data/dictionary.bin";
+
   @Test
   void entryCreation(@TempDir Path tempDir) throws IOException {
     new BrotliLoader(tempDir).extractLibrary();
@@ -94,5 +97,57 @@ class BrotliLoaderTest {
     assertThatThrownBy(loader2::loadBrotliDictionary)
         .isInstanceOf(IOException.class)
         .hasMessage("Too large dictionary");
+  }
+
+  @Test
+  void customLibraryPath(@TempDir Path tempDir) throws IOException {
+    var loadedPaths = new ArrayList<String>();
+    var customLibDir = Files.createDirectory(tempDir.resolve("custom-lib"));
+
+    System.setProperty("com.github.mizosoft.methanol.brotli.libraryPath", customLibDir.toString());
+    try {
+      new BrotliLoader(
+              tempDir,
+              DEFAULT_DICTIONARY_PATH,
+              new com.github.mizosoft.methanol.brotli.internal.LibLoader() {
+                @Override
+                public void load(String absolutePath) {
+                  loadedPaths.add(absolutePath);
+                }
+
+                @Override
+                public void loadLibrary(String libName) {
+                  loadedPaths.add(libName);
+                }
+              })
+          .loadLibrary();
+      assertThat(loadedPaths)
+          .hasSize(1)
+          .first()
+          .isEqualTo(customLibDir.resolve(System.mapLibraryName(BASE_LIB_NAME)).toString());
+    } finally {
+      System.clearProperty("com.github.mizosoft.methanol.brotli.libraryPath");
+    }
+  }
+
+  @Test
+  void javaLibraryPath(@TempDir Path tempDir) throws IOException {
+    var loadedPaths = new ArrayList<String>();
+    new BrotliLoader(
+            tempDir,
+            DEFAULT_DICTIONARY_PATH,
+            new LibLoader() {
+              @Override
+              public void load(String absolutePath) {
+                loadedPaths.add(absolutePath);
+              }
+
+              @Override
+              public void loadLibrary(String libName) {
+                loadedPaths.add(libName);
+              }
+            })
+        .loadLibrary();
+    assertThat(loadedPaths).hasSize(1).first().isEqualTo(BASE_LIB_NAME);
   }
 }
