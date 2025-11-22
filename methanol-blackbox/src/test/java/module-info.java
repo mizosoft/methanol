@@ -36,6 +36,7 @@ import com.github.mizosoft.methanol.blackbox.support.StringDecoderProvider;
 open module methanol.blackbox {
   requires methanol;
   requires methanol.adapter.jackson;
+  requires com.fasterxml.jackson.annotation;
   requires methanol.adapter.jackson.flux;
   requires methanol.adapter.protobuf;
   requires methanol.adapter.jaxb;
