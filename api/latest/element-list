@@ -31,6 +31,7 @@ module:methanol.adapter.protobuf
 com.github.mizosoft.methanol.adapter.protobuf
 module:methanol.brotli
 com.github.mizosoft.methanol.brotli.internal
+com.github.mizosoft.methanol.brotli.internal.vendor
 module:methanol.kotlin
 com.github.mizosoft.methanol.kotlin
 module:methanol.redis
