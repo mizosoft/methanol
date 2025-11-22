@@ -38,10 +38,7 @@ import java.util.Base64;
 import org.brotli.dec.BrotliInputStream;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledOnOs;
-import org.junit.jupiter.api.condition.OS;
 
-@DisabledOnOs(value = OS.MAC, architectures = "aarch64")
 class BrotliDecoderTest {
   private static final String GOOD =
       "ocAXACEazuXPqLgaOX42Jj+EdAT91430gPT27km/6WbK3kTpTWJBJkmAeWoBWebW3oK/qHGuI8e6WIjsH5Qqmrt4ByakvCwb73IT2E7OA3MDpxszTNgAn1xJrzB3qoFjKUOWYBi+VYYbqmhiWlHmHtjbjdVfy3jnR9rs6X7PuzmVyW93/LLKaujeyU6O/8yJu4RSPpCDX8afTBrKXY6Vh/5ZqGfsC9oJGm3XX+klIwK/5sMFqil13dFUJH/xZhMm/JyLMb+HN6gerSzhhBGBAbNBkYaDVHKTZyy28+4XjDnIaY83AkYLSCJ7BIUq0b90zmwYPG4A";
@@ -52,7 +49,7 @@ class BrotliDecoderTest {
 
   @BeforeAll
   static void loadBrotli() throws IOException {
-    BrotliLoader.instance().ensureLoaded();
+    BrotliLoader.ensureLoaded();
   }
 
   @Test
@@ -91,7 +88,7 @@ class BrotliDecoderTest {
       assertThatIOException()
           .isThrownBy(() -> Decode.decode(new BrotliDecoder(), overflowedStream, option))
           .extracting(Throwable::getMessage, STRING)
-          .containsAnyOf("corrupt brotli stream", "brotli stream finished prematurely");
+          .containsAnyOf("Corrupt brotli stream", "Brotli stream finished prematurely");
     }
   }
 

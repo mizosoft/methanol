@@ -24,75 +24,130 @@ package com.github.mizosoft.methanol.brotli.internal;
 
 import static com.github.mizosoft.methanol.brotli.internal.BrotliLoader.BASE_LIB_NAME;
 import static com.github.mizosoft.methanol.brotli.internal.BrotliLoader.ENTRY_DIR_PREFIX;
+import static com.github.mizosoft.methanol.brotli.internal.BrotliLoader.LOCK_FILE_NAME;
+import static com.github.mizosoft.methanol.brotli.internal.BrotliLoader.WORKSPACE_DIR_NAME;
 import static com.github.mizosoft.methanol.testing.TestUtils.listFiles;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Set;
+import java.util.ArrayList;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledOnOs;
-import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 
-@DisabledOnOs(value = OS.MAC, architectures = "aarch64")
 class BrotliLoaderTest {
+  private static final String DEFAULT_DICTIONARY_PATH = "/data/dictionary.bin";
 
   @Test
   void entryCreation(@TempDir Path tempDir) throws IOException {
     new BrotliLoader(tempDir).extractLibrary();
 
     var libName = System.mapLibraryName(BASE_LIB_NAME);
-    var createdEntries = listFiles(tempDir);
-    assertEquals(1, createdEntries.size(), createdEntries.toString());
+    var createdEntries = listFiles(tempDir.resolve(WORKSPACE_DIR_NAME));
+    assertThat(createdEntries).hasSize(1);
 
     var entry = createdEntries.get(0);
     var createdFiles = listFiles(entry);
-    assertEquals(2, createdFiles.size(), createdFiles.toString());
-
-    var expected = Set.of(entry.resolve(libName), entry.resolve(libName + ".lock"));
-    assertEquals(expected, Set.copyOf(createdFiles));
+    assertThat(createdFiles).hasSize(2);
+    assertThat(createdFiles)
+        .containsExactlyInAnyOrder(entry.resolve(libName), entry.resolve(LOCK_FILE_NAME));
   }
 
   @Test
   void cleanupRoutine(@TempDir Path tempDir) throws IOException {
     var libName = System.mapLibraryName(BASE_LIB_NAME);
-    var staleEntry = Files.createDirectory(tempDir.resolve(ENTRY_DIR_PREFIX + "stale"));
-    var activeEntry = Files.createDirectories(tempDir.resolve(ENTRY_DIR_PREFIX + "active"));
-    Files.createFile(staleEntry.resolve(libName)); // Stale entry has only the lib file.
-    Files.createFile(activeEntry.resolve(libName)); // Active entry has both lib and lock files.
-    Files.createFile(activeEntry.resolve(libName + ".lock"));
+    var workspaceDir = Files.createDirectories(tempDir.resolve(WORKSPACE_DIR_NAME));
+    var staleEntry = Files.createDirectory(workspaceDir.resolve(ENTRY_DIR_PREFIX + "stale"));
+    var activeEntry = Files.createDirectories(workspaceDir.resolve(ENTRY_DIR_PREFIX + "active"));
 
-    var entryUnderCreation =
-        Files.createDirectory(tempDir.resolve(ENTRY_DIR_PREFIX + "underCreation"));
+    // Stale entry has only the lib file.
+    Files.createFile(staleEntry.resolve(libName));
+
+    // Active entry has both lib and lock files.
+    Files.createFile(activeEntry.resolve(libName));
+    Files.createFile(activeEntry.resolve(LOCK_FILE_NAME));
+
+    var entryUnderCreation = Files.createDirectory(workspaceDir.resolve("underCreation"));
 
     new BrotliLoader(tempDir).extractLibrary();
 
-    var entries = listFiles(tempDir);
-    assertEquals(3, entries.size(), entries.toString()); // (active, under creation, new)
-    assertFalse(entries.contains(staleEntry), entries.toString());
-    assertTrue(entries.containsAll(Set.of(activeEntry, entryUnderCreation)), entries.toString());
+    var entries = listFiles(workspaceDir);
+    assertThat(entries).hasSize(3); // (active, under creation, new)
+    assertThat(entries).doesNotContain(staleEntry);
+    assertThat(entries).contains(activeEntry, entryUnderCreation);
   }
 
   @Test
   void corruptDictionary(@TempDir Path tempDir) {
     var loader = new BrotliLoader(tempDir, "/data/corrupt_dictionary.bin");
-    var ioe = assertThrows(IOException.class, loader::loadBrotliDictionary);
-    assertEquals(ioe.getMessage(), "dictionary is corrupt");
+    assertThatThrownBy(loader::load)
+        .isInstanceOf(IOException.class)
+        .hasMessage("Corrupt dictionary");
   }
 
   @Test
   void wrongDictionarySize(@TempDir Path tempDir) {
     var loader = new BrotliLoader(tempDir, "/data/truncated_dictionary.bin");
-    assertThrows(EOFException.class, loader::loadBrotliDictionary);
+    assertThatThrownBy(loader::load).isInstanceOf(EOFException.class);
 
     var loader2 = new BrotliLoader(tempDir, "/data/elongated_dictionary.bin");
-    var ioe = assertThrows(IOException.class, loader2::loadBrotliDictionary);
-    assertEquals(ioe.getMessage(), "too large dictionary");
+    assertThatThrownBy(loader2::loadBrotliDictionary)
+        .isInstanceOf(IOException.class)
+        .hasMessage("Too large dictionary");
+  }
+
+  @Test
+  void customLibraryPath(@TempDir Path tempDir) throws IOException {
+    var loadedPaths = new ArrayList<String>();
+    var customLibDir = Files.createDirectory(tempDir.resolve("custom-lib"));
+
+    System.setProperty("com.github.mizosoft.methanol.brotli.libraryPath", customLibDir.toString());
+    try {
+      new BrotliLoader(
+              tempDir,
+              DEFAULT_DICTIONARY_PATH,
+              new com.github.mizosoft.methanol.brotli.internal.LibLoader() {
+                @Override
+                public void load(String absolutePath) {
+                  loadedPaths.add(absolutePath);
+                }
+
+                @Override
+                public void loadLibrary(String libName) {
+                  loadedPaths.add(libName);
+                }
+              })
+          .loadLibrary();
+      assertThat(loadedPaths)
+          .hasSize(1)
+          .first()
+          .isEqualTo(customLibDir.resolve(System.mapLibraryName(BASE_LIB_NAME)).toString());
+    } finally {
+      System.clearProperty("com.github.mizosoft.methanol.brotli.libraryPath");
+    }
+  }
+
+  @Test
+  void javaLibraryPath(@TempDir Path tempDir) throws IOException {
+    var loadedPaths = new ArrayList<String>();
+    new BrotliLoader(
+            tempDir,
+            DEFAULT_DICTIONARY_PATH,
+            new LibLoader() {
+              @Override
+              public void load(String absolutePath) {
+                loadedPaths.add(absolutePath);
+              }
+
+              @Override
+              public void loadLibrary(String libName) {
+                loadedPaths.add(libName);
+              }
+            })
+        .loadLibrary();
+    assertThat(loadedPaths).hasSize(1).first().isEqualTo(BASE_LIB_NAME);
   }
 }

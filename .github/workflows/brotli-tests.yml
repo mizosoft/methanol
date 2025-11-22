@@ -1,0 +1,38 @@
+name: Brotli Tests
+
+on: [ push, pull_request, workflow_dispatch ]
+
+env:
+  BASE_JAVA: 21
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - ubuntu-24.04-arm
+          - windows-latest
+          - windows-11-arm
+          - macos-15-intel
+          - macos-latest
+    name: Test on ${{ matrix.os }} with Java ${{ matrix.java }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run tests
+        uses: ./.github/actions/gradle
+        with:
+          java-version: ${{ env.BASE_JAVA }}
+          gradle-args: :methanol-brotli:check
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ matrix.os }}-java-${{ env.BASE_JAVA }}-brotli-test-results
+          path: |
+            **/build/test-results/
+            **/build/**/*.exec

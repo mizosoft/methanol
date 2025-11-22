@@ -22,34 +22,91 @@ implementation("com.github.mizosoft.methanol:methanol-brotli:1.8.4")
 
 ## Implementation notes
 
-The Java brotli decoder provided by Google only exposes `InputStream` APIs. It cannot be used
-to implement a non-blocking `BodyDecoder`. The C implementation is used instead through JNI
-bindings (also provided by Google). To allow multi-platform support, native libraries for each
-supported OS X Architecture are bundled with the JAR and extracted to a temp directory on use.
+The Java brotli decoder provided by Google only exposes
+`InputStream` APIs. It cannot be used to implement a non-blocking
+`BodyDecoder`. The C implementation is used instead through JNI bindings (also provided by Google). To allow multi-platform support, native libraries for each supported OS and architecture are bundled with the JAR and extracted to a temp directory on use.
 
 ### Supported platforms
 
-| OS       | x86 | x64 | Tool Chain   | Tested Machines     |
-|----------|-----|-----|--------------|---------------------|
-| Windows  | ✔   | ✔  | Visual C++   | Windows 10 & CI   |
-| Linux    | ✔   | ✔  | GCC 9.2.1    | Ubuntu 19.10 & CI |
-| Mac OS   | ❌  | ❌ |              |                     |
+| OS       | x86-64 | ARM64 (aarch64) |
+|----------|--------|-----------------|
+| Windows  | ✔      | ✔              |
+| Linux    | ✔      | ✔              |
+| macOS    | ✔      | ✔              |
 
-### Building from source
+### JAR variants
 
-You can build from source if your platform is not supported. The build routine uses Gradle's
-[native software plugin][gradle_native_plugin]. You need to have a tool chain that's
-[supported by gradle][gradle_supported_toolchains] for your OS.
+The library is published with multiple JAR variants to support different use cases:
 
-#### Steps
+#### 1. Default (Fat JAR)
 
-After cloning this repo, run gradle with the `installBrotli` and `assemble` tasks:
+```gradle
+implementation("com.github.mizosoft.methanol:methanol-brotli:1.8.4")
+```
 
-`gradlew installBrotli :methanol-brotli:assemble`
+- **Includes:** Java classes + native libraries for all supported platforms
+- **Use when:
+  ** You want the simplest setup that works for all supported platforms and don't mind the larger JAR size (~2MB)
 
-This builds the native libraries and copies them to `src/main/resources` for inclusion in the JAR.
-You will find the assembled ready-to-use Jar in the `build/libs/` directory.
+#### 2. Platform-specific JAR
+
+```gradle
+implementation("com.github.mizosoft.methanol:methanol-brotli:1.8.4") {
+  artifact {
+    classifier = "linux-x86-64"
+  }
+}
+```
+
+- **Includes:** Java classes + native library for one specific platform
+- **Use when:** You know your target platform and want a smaller JAR
+- **Available classifiers:** `linux-x86-64`, `linux-aarch64`, `macos-x86-64`, `macos-aarch64`, `windows-x86-64`,
+  `windows-aarch64`
+
+#### 3. Base JAR (No natives)
+
+```gradle
+implementation("com.github.mizosoft.methanol:methanol-brotli:1.8.4") {
+  artifact {
+    classifier = "base"
+  }
+}
+```
+
+- **Includes:** Only Java classes (no native libraries)
+- **Use when:** You want to provide your own native library build
+- **Requires:** Setting custom library path
+
+### Custom native library loading
+
+You can provide your own native library build through system properties. The library tries to load natives in this order:
+
+1. **Custom directory path** (if specified):
+   ```bash
+   java -Dcom.github.mizosoft.methanol.brotli.libraryPath=/path/to/lib/dir -jar app.jar
+   ```
+   Looks for the platform-specific library file (e.g., `libbrotlijni.so`, `brotlijni.dll`) in the specified directory.
+
+2. **Standard `java.library.path`**:
+   ```bash
+   java -Djava.library.path=/path/to/lib/dir -jar app.jar
+   ```
+   Uses Java's built-in library search mechanism.
+
+3. **Bundled extraction (default)**:
+   If no custom path is specified or loading fails, extracts the bundled native library from the JAR to a temp directory.
+
+#### Building from source
+
+If your platform is not supported, you can build from the source in the `native` directory.
+
+```bash
+# Build your custom brotli native library.
+cd native
+cmake .
+cmake --buid .
+```
+
+Then you can include the base jar and provide a custom load directory.
 
 [brotli]: https://github.com/google/brotli
-[gradle_native_plugin]: https://docs.gradle.org/current/userguide/native_software.html
-[gradle_supported_toolchains]: https://docs.gradle.org/current/userguide/native_software.html#native-binaries:tool-chain-support

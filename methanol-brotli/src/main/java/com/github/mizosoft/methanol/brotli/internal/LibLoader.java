@@ -20,16 +20,28 @@
  * SOFTWARE.
  */
 
-/**
- * Provides <a href="https://github.com/google/brotli">Brotli</a> decompression for Methanol.
- *
- * @provides com.github.mizosoft.methanol.BodyDecoder.Factory
- */
-module methanol.brotli {
-  requires methanol;
-  requires static org.checkerframework.checker.qual;
-  requires static com.google.errorprone.annotations;
+package com.github.mizosoft.methanol.brotli.internal;
 
-  provides com.github.mizosoft.methanol.BodyDecoder.Factory with
-      com.github.mizosoft.methanol.brotli.internal.BrotliBodyDecoderFactory;
+/** Abstraction for loading native libraries. */
+interface LibLoader {
+  /** Loads the native library from the specified absolute path. */
+  void load(String absolutePath) throws UnsatisfiedLinkError;
+
+  /** Loads the native library with the specified name from the library path. */
+  void loadLibrary(String libName) throws UnsatisfiedLinkError;
+
+  /** System implementation that delegates to {@link System#load} and {@link System#loadLibrary}. */
+  enum SystemLibLoader implements LibLoader {
+    INSTANCE;
+
+    @Override
+    public void load(String absolutePath) throws UnsatisfiedLinkError {
+      System.load(absolutePath);
+    }
+
+    @Override
+    public void loadLibrary(String libName) throws UnsatisfiedLinkError {
+      System.loadLibrary(libName);
+    }
+  }
 }

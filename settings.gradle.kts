@@ -1,5 +1,5 @@
 import java.io.FileNotFoundException
-import java.util.*
+import java.util.Properties
 
 rootProject.name = "methanol-parent"
 
@@ -17,13 +17,17 @@ include("methanol-blackbox")
 include("methanol-benchmarks")
 include("methanol-samples")
 include("methanol-samples:crawler")
-include("methanol-samples:download-progress")
-include("methanol-samples:upload-progress")
 include("methanol-samples:kotlin")
 include("spring-boot-test")
 include("methanol-redis")
 include("methanol-kotlin")
 include("methanol-moshi")
+
+// Include JavaFX samples on supported platforms only.
+if (!(org.gradle.internal.os.OperatingSystem.current().isWindows && System.getProperty("os.arch") == "aarch64")) {
+  include("methanol-samples:download-progress")
+  include("methanol-samples:upload-progress")
+}
 
 // Load local properties while giving precedence to properties defined through CLI.
 try {
@@ -44,12 +48,4 @@ val includeNativeTests: String? by settings
 if (includeNativeTests != null) {
   include("quarkus-native-test")
   include("native-test")
-}
-
-// Only include native brotli-jni project if explicitly requested.
-val includeBrotliJni: String? by settings
-if (includeBrotliJni != null
-  || settings.gradle.startParameter.taskNames.contains("installBrotli")
-) {
-  include("methanol-brotli:brotli-jni")
 }
