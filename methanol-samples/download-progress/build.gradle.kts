@@ -1,6 +1,6 @@
 plugins {
   application
-  id("conventions.java-library")
+  id("conventions.java")
   id("conventions.static-analysis")
   alias(libs.plugins.javafx)
 }

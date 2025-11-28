@@ -226,7 +226,8 @@ public class MoreBodyHandlers {
     private BodySubscriber<T> wrapDownstream(String encoding, ResponseInfo responseInfo) {
       var factory =
           BodyDecoder.Factory.getFactory(encoding)
-              .orElseThrow(() -> new UnsupportedOperationException("unsupported encoding"));
+              .orElseThrow(
+                  () -> new UnsupportedOperationException("Unsupported encoding: " + encoding));
 
       // Don't pass on outdated headers to downstream.
       var strippedHeaders =

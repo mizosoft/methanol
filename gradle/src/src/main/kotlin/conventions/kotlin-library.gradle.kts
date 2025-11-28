@@ -11,7 +11,7 @@ plugins {
   id("conventions.java-library")
 }
 
-tasks.withType<KotlinCompile>().configureEach {
+tasks.withType<KotlinCompile> {
   compilerOptions {
     jvmTarget.set(JvmTarget.JVM_11)
   }
@@ -19,7 +19,7 @@ tasks.withType<KotlinCompile>().configureEach {
 
 project.optionalJavaModuleName?.let {
   // Provide compiled Kotlin classes to javac – needed for Java/Kotlin mixed sources to work.
-  tasks.named<JavaCompile>("compileJava") {
+  tasks.compileJava {
     options.compilerArgumentProviders.add(CommandLineArgumentProvider {
       listOf("--patch-module", "$it=${sourceSets["main"].output.asPath}")
     })

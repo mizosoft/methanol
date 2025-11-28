@@ -39,6 +39,9 @@ module methanol {
   exports com.github.mizosoft.methanol.decoder;
   exports com.github.mizosoft.methanol.adapter;
   exports com.github.mizosoft.methanol.function;
+
+  // Qualified exports should be mapped to OSGI Export-Package & x-friends attrs in the build
+  // script.
   exports com.github.mizosoft.methanol.internal.flow to
       methanol.adapter.jackson,
       methanol.adapter.jackson.flux,

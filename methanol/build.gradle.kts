@@ -1,25 +1,3 @@
-/*
- * Copyright (c) 2024 Moataz Hussein
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
-
 import net.ltgt.gradle.errorprone.errorprone
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.gradle.kotlin.dsl.KotlinClosure2
@@ -130,4 +108,23 @@ tckTest {
 
 tasks.check {
   dependsOn(tckTest)
+}
+
+// Override OSGi configuration to export internal packages that are present as qualified exports in the module-info.java file.
+tasks.jar {
+  bundle {
+    bnd(
+      """
+      # Export internal packages that have qualified exports in module-info.java.
+      # Use x-friends to indicate which bundles should have access (matching JPMS qualified exports).
+      Export-Package: \
+        com.github.mizosoft.methanol.internal.flow;x-internal:=true;x-friends:="methanol-jackson,methanol-jackson-flux,methanol-redis,methanol-testing";version=${project.version}, \
+        com.github.mizosoft.methanol.internal.extensions;x-internal:=true;x-friends:="methanol-jackson,methanol-jackson-flux,methanol-kotlin";version=${project.version}, \
+        com.github.mizosoft.methanol.internal.cache;x-internal:=true;x-friends:="methanol-redis,methanol-testing";version=${project.version}, \
+        com.github.mizosoft.methanol.internal.function;x-internal:=true;x-friends:="methanol-testing,methanol-brotli";version=${project.version}, \
+        com.github.mizosoft.methanol.internal;x-internal:=true;x-friends:="methanol-redis,methanol-testing,methanol-jaxb-jakarta,methanol-jaxb,methanol-brotli";version=${project.version}, \
+        com.github.mizosoft.methanol.internal.concurrent;x-internal:=true;x-friends:="methanol-jackson,methanol-redis,methanol-testing,methanol-brotli";version=${project.version}
+    """
+    )
+  }
 }

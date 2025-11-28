@@ -1,5 +1,5 @@
 plugins {
-  id("conventions.java-library")
+  id("conventions.java")
   id("conventions.static-analysis")
   application
 }
