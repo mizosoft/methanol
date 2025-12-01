@@ -5,7 +5,7 @@ import extensions.applyLoggingAndReportingConventions
 import extensions.libs
 
 plugins {
-  `java-library`
+  id("conventions.java")
 }
 
 dependencies {

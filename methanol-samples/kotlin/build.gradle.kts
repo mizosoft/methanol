@@ -1,5 +1,5 @@
 plugins {
-  id("conventions.kotlin-library")
+  id("org.jetbrains.kotlin.jvm")
   kotlin("plugin.serialization") version "2.1.0"
 }
 

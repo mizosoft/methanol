@@ -1,8 +1,7 @@
 plugins {
-  id("conventions.java-library")
-  id("conventions.static-analysis")
   id("conventions.java-testing")
   id("conventions.coverage")
+  id("conventions.static-analysis")
   alias(libs.plugins.quarkus)
 }
 

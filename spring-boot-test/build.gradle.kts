@@ -1,5 +1,4 @@
 plugins {
-  id("conventions.java-library")
   id("conventions.java-testing")
   id("conventions.static-analysis")
   id("conventions.coverage")
@@ -24,14 +23,14 @@ dependencies {
 
 // Make sure we only run this in Java 17+ setups.
 
-tasks.withType<JavaCompile>().configureEach {
+tasks.withType<JavaCompile> {
   onlyIf {
     java.toolchain.languageVersion.get().asInt() >= 17
   }
   options.release = 17 // Override to look for the correct dependencies.
 }
 
-tasks.withType<Test>().configureEach {
+tasks.withType<Test> {
   onlyIf {
     java.toolchain.languageVersion.get().asInt() >= 17
   }

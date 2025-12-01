@@ -37,6 +37,8 @@ kotlinx-serialization = "1.9.0"
 assertk = "0.28.1"
 kotlin = "2.2.20"
 moshi = "1.15.2"
+bnd = "7.1.0"
+eclipse-osgi = "3.20.0"
 versions-plugin = "0.52.0"
 nexus-publish = "2.0.0"
 protobuf-plugin = "0.9.5"
@@ -107,6 +109,11 @@ kotlinx-serialization-protobuf = { module = "org.jetbrains.kotlinx:kotlinx-seria
 assertk = { module = "com.willowtreeapps.assertk:assertk", version.ref = "assertk" }
 moshi = { module = "com.squareup.moshi:moshi", version.ref = "moshi" }
 moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshi" }
+bnd-lib = { module = "biz.aQute.bnd:biz.aQute.bndlib", version.ref = "bnd" }
+bnd-resolve = { module = "biz.aQute.bnd:biz.aQute.resolve", version.ref = "bnd" }
+bnd-repository = { module = "biz.aQute.bnd:biz.aQute.repository", version.ref = "bnd" }
+eclipse-osgi = { module = "org.eclipse.platform:org.eclipse.osgi", version.ref = "eclipse-osgi" }
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
 
 [plugins]
 versions = { id = "com.github.ben-manes.versions", version.ref = "versions-plugin" }
@@ -125,3 +132,4 @@ nullaway = { id = "net.ltgt.nullaway", version.ref = "nullaway-plugin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 checkerframework = { id = "org.checkerframework", version.ref = "checkerframework-plugin" }
 coveralls-jacoco = { id = "com.github.nbaztec.coveralls-jacoco", version.ref = "coveralls-jacoco-plugin" }
+bnd = { id = "biz.aQute.bnd.builder", version.ref = "bnd" }

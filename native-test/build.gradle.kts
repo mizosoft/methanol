@@ -1,5 +1,4 @@
 plugins {
-  id("conventions.java-library")
   id("conventions.static-analysis")
   id("conventions.java-testing")
   id("conventions.coverage")
@@ -35,6 +34,6 @@ graalvmNative {
 }
 
 // Always run native tests.
-tasks.named("check") {
-  dependsOn(tasks.named("nativeTest"))
+tasks.check {
+  dependsOn(tasks.nativeTest)
 }

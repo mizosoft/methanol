@@ -22,6 +22,7 @@ include("spring-boot-test")
 include("methanol-redis")
 include("methanol-kotlin")
 include("methanol-moshi")
+include("osgi-test")
 
 // Include JavaFX samples on supported platforms only.
 if (!(org.gradle.internal.os.OperatingSystem.current().isWindows && System.getProperty("os.arch") == "aarch64")) {

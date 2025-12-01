@@ -1,23 +1,11 @@
 package conventions
 
 import extensions.*
-import java.nio.charset.StandardCharsets
 
 plugins {
   `java-library`
-}
-
-// Specify a toolchain matching project's javaVersion property if specified.
-java {
-  toolchain {
-    languageVersion =
-      JavaLanguageVersion.of(project.javaVersion ?: JavaVersion.current().toString())
-    project.javaVendor?.let {
-      @Suppress("UnstableApiUsage")
-      vendor = JvmVendorSpec.of(it)
-    }
-    nativeImageCapable = project.javaNativeImageCapable
-  }
+  id("conventions.java")
+  id("biz.aQute.bnd.builder")
 }
 
 tasks.withType<JavaCompile> {
@@ -28,7 +16,6 @@ tasks.withType<JavaCompile> {
     compilerArgs.add("-Xlint:-module")
 
     release = 11
-    encoding = StandardCharsets.UTF_8.name()
   }
 }
 
@@ -36,5 +23,17 @@ tasks.withType<Javadoc> {
   standardOptions {
     links("https://docs.oracle.com/en/java/javase/$JAVADOC_JDK_VERSION/docs/api/")
     addBooleanOption("Xdoclint:-missing", true)
+  }
+}
+
+tasks.jar {
+  bundle {
+    bnd(
+      """
+      -exportcontents: !*.internal*,*
+      Import-Package: !org.checkerframework.*,!com.google.errorprone.*,*
+      Bundle-Description: ${project.description}
+    """
+    )
   }
 }
