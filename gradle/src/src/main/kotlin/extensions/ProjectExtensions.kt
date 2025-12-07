@@ -128,3 +128,17 @@ val Project.enableErrorprone
 
 val Project.enableCheckerframework
   get() = project.hasProperty("enableCheckerframework")
+
+fun extractMinVersion(versionRange: String): String {
+  val trimmed = versionRange.trim()
+  return if (trimmed.startsWith("[") || trimmed.startsWith("(")) {
+    val endOfMinVersion = trimmed.indexOfAny(charArrayOf(',', ')'))
+    if (endOfMinVersion > 0) {
+      trimmed.substring(1, endOfMinVersion).trim()
+    } else {
+      trimmed // Fallback if parsing fails.
+    }
+  } else {
+    trimmed
+  }
+}
