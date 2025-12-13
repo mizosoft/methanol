@@ -28,8 +28,8 @@ sourceSets {
   }
 }
 
-val tckTestImplementation: Configuration by configurations.getting
-val tckTestCompileOnly: Configuration by configurations.getting {
+val tckTestImplementation by configurations.getting
+val tckTestCompileOnly by configurations.getting {
   extendsFrom(configurations.compileOnly.get())
 }
 
@@ -110,7 +110,7 @@ tasks.check {
   dependsOn(tckTest)
 }
 
-// Override OSGi configuration to export internal packages that are present as qualified exports in the module-info.java file.
+// Extend OSGi configuration to export internal packages that are present as qualified exports in the module-info.java file.
 tasks.jar {
   bundle {
     bnd(

@@ -22,9 +22,9 @@ implementation("com.github.mizosoft.methanol:methanol-brotli:1.8.4")
 
 ## Implementation notes
 
-The Java brotli decoder provided by Google only exposes
-`InputStream` APIs. It cannot be used to implement a non-blocking
-`BodyDecoder`. The C implementation is used instead through JNI bindings (also provided by Google). To allow multi-platform support, native libraries for each supported OS and architecture are bundled with the JAR and extracted to a temp directory on use.
+The Java brotli decoder provided by Google only exposes `InputStream` APIs. It cannot be used to implement a non-blocking `BodyDecoder`.
+The C implementation is used instead through JNI bindings (also provided by Google). To allow multi-platform support, native libraries
+for each supported OS and architecture are bundled with the JAR and extracted to a temp directory on use.
 
 ### Supported platforms
 
@@ -45,8 +45,7 @@ implementation("com.github.mizosoft.methanol:methanol-brotli:1.8.4")
 ```
 
 - **Includes:** Java classes + native libraries for all supported platforms
-- **Use when:
-  ** You want the simplest setup that works for all supported platforms and don't mind the larger JAR size (~2MB)
+- **Use when:** You want the simplest setup that works for all supported platforms and don't mind the larger JAR size (~2MB)
 
 #### 2. Platform-specific JAR
 
@@ -60,8 +59,7 @@ implementation("com.github.mizosoft.methanol:methanol-brotli:1.8.4") {
 
 - **Includes:** Java classes + native library for one specific platform
 - **Use when:** You know your target platform and want a smaller JAR
-- **Available classifiers:** `linux-x86-64`, `linux-aarch64`, `macos-x86-64`, `macos-aarch64`, `windows-x86-64`,
-  `windows-aarch64`
+- **Available classifiers:** `linux-x86-64`, `linux-aarch64`, `macos-x86-64`, `macos-aarch64`, `windows-x86-64`, `windows-aarch64`
 
 #### 3. Base JAR (No natives)
 

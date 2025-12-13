@@ -3,6 +3,7 @@ plugins {
   id("conventions.kotlin-testing")
   id("conventions.coverage")
   id("conventions.publishing")
+  id("conventions.min-version-test")
 }
 
 repositories {

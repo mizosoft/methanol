@@ -4,6 +4,7 @@ plugins {
   id("conventions.static-analysis")
   id("conventions.coverage")
   id("conventions.publishing")
+  id("conventions.min-version-test")
 }
 
 dependencies {
