@@ -4,7 +4,6 @@ plugins {
   id("conventions.coverage")
   id("conventions.publishing")
   kotlin("plugin.serialization") version libs.versions.kotlin.serialization.plugin.get()
-  id("conventions.min-version-test")
 }
 
 repositories {
