@@ -1,0 +1,36 @@
+name: Minimum Version Test
+
+on: [ push, pull_request, workflow_dispatch ]
+
+env:
+  BASE_JAVA: 21
+
+jobs:
+  min-version-test:
+    name: Test Integration Modules with Minimum Versions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Redis
+        shell: bash
+        run: |
+          chmod +x install-redis-ubuntu.sh
+          ./install-redis-ubuntu.sh
+
+      - name: Run minVersionTest on all integration modules
+        uses: ./.github/actions/gradle
+        with:
+          java-version: ${{ env.BASE_JAVA }}
+          gradle-args: minVersionTest
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: min-version-test-results
+          path: |
+            **/build/test-results/minVersionTest/
+            **/build/reports/tests/minVersionTest/

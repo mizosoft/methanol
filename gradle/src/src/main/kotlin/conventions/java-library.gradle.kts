@@ -5,7 +5,7 @@ import extensions.*
 plugins {
   `java-library`
   id("conventions.java")
-  id("biz.aQute.bnd.builder")
+  id("conventions.bnd")
 }
 
 tasks.withType<JavaCompile> {
@@ -23,17 +23,5 @@ tasks.withType<Javadoc> {
   standardOptions {
     links("https://docs.oracle.com/en/java/javase/$JAVADOC_JDK_VERSION/docs/api/")
     addBooleanOption("Xdoclint:-missing", true)
-  }
-}
-
-tasks.jar {
-  bundle {
-    bnd(
-      """
-      -exportcontents: !*.internal*,*
-      Import-Package: !org.checkerframework.*,!com.google.errorprone.*,*
-      Bundle-Description: ${project.description}
-    """
-    )
   }
 }

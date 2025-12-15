@@ -26,10 +26,13 @@ import com.github.javaparser.JavaParser
 import com.github.javaparser.ParserConfiguration
 import org.gradle.accessors.dm.LibrariesForLibs
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ExternalModuleDependency
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.kotlin.dsl.add
 import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.the
+import org.gradle.kotlin.dsl.withType
 
 const val JAVADOC_JDK_VERSION = 11
 const val JAVADOC_URL = "https://mizosoft.github.io/methanol/api/latest"
@@ -128,3 +131,39 @@ val Project.enableErrorprone
 
 val Project.enableCheckerframework
   get() = project.hasProperty("enableCheckerframework")
+
+fun extractMinVersion(versionRange: String): String {
+  val trimmed = versionRange.trim()
+  return if (trimmed.startsWith("[") || trimmed.startsWith("(")) {
+    val endOfMinVersion = trimmed.indexOfAny(charArrayOf(',', ')'))
+    if (endOfMinVersion > 0) {
+      trimmed.substring(1, endOfMinVersion).trim()
+    } else {
+      trimmed // Fallback if parsing fails.
+    }
+  } else {
+    trimmed
+  }
+}
+
+/**
+ * Examines all external dependencies in the source configuration and forces any version ranges to
+ * resolve to their minimum version.
+ */
+fun Configuration.forceMinimumVersions(sourceConfiguration: Configuration) {
+  resolutionStrategy {
+    val forcedDependencies = mutableListOf<String>()
+
+    sourceConfiguration.allDependencies.withType<ExternalModuleDependency>().forEach { dep ->
+      val requestedVersion = dep.versionConstraint.requiredVersion
+      if (requestedVersion.startsWith("[") || requestedVersion.startsWith("(")) {
+        val minVersion = extractMinVersion(requestedVersion)
+        forcedDependencies.add("${dep.group}:${dep.name}:$minVersion")
+      }
+    }
+
+    if (forcedDependencies.isNotEmpty()) {
+      force(*forcedDependencies.toTypedArray())
+    }
+  }
+}
