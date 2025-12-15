@@ -1119,6 +1119,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Building">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#brotli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Brotli
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1129,6 +1146,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Dependencies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#version-ranges" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Version Ranges
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1179,22 +1213,44 @@ If you're considering small changes (e.g. in documentation), you can open a PR d
 order to properly work with Gradle.</p>
 <h2 id="building">Building<a class="headerlink" href="#building" title="Permanent link">&para;</a></h2>
 <p>Before submitting a change, make sure to first run tests and code analysis. </p>
-<p><code>./gradlew clean check -PenableErrorprone</code></p>
+<p><code>./gradlew clean check minVersionTest -PenableErrorprone</code></p>
 <p><a href="https://errorprone.info/">Error-prone</a> checks are included but disabled by default for build speed. It is desirable
 to make errorprone happy (maybe via reasonable suppressions). <a href="https://checkerframework.org/">Checker Framework</a>
-is optionally used but mainly for informative reasons (its acts weird and crashes, patches regarding
+is optionally used but mainly for informative reasons (it acts weird and crashes, patches regarding
 this are welcome). Similarly, it can be run with <code>enableCheckerframework</code> project property.</p>
-<p><a href="https://github.com/mizosoft/methanol/tree/master/methanol-brotli"><code>methanol-brotli</code></a> uses JNI and contains a <code>c/c++</code> subproject for the brotli decoder.
-The native project is not included in the build by default. You can do so with project property
-<code>includeBrotliJni</code> or running the <code>installBrotli</code> task if you have a proper tool chain. Note that
-brotli isn't yet supported for macOS, so make sure to exclude brotli tests when running from a Mac:</p>
-<p><code>./gradlew check -PenableErrorprone -x methanol-brotli:test</code></p>
+<h3 id="brotli">Brotli<a class="headerlink" href="#brotli" title="Permanent link">&para;</a></h3>
+<p><a href="https://github.com/mizosoft/methanol/tree/master/methanol-brotli"><code>methanol-brotli</code></a> uses JNI and contains a <code>native</code> CMake project for native brotli code. The workflow for
+native code changes is as follows:</p>
+<ul>
+<li>Update core C or JNI code by copying from the <a href="https://github.com/google/brotli">main brotli repo</a>.</li>
+<li>Run the <a href="https://github.com/mizosoft/methanol/actions/workflows/build-brotli.yml">Build Brotli</a> action on CI.</li>
+<li>Merge the automatically created pull request (e.g. <a href="https://github.com/mizosoft/methanol/pull/163">here</a>).</li>
+</ul>
 <h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
 <p>Methanol makes it easier to use third-party libraries with the HTTP client. However, it does so 
 without making users pay for what they don't need. The core module currently has zero runtime 
 dependencies, and it is important it remains so. Features that require dependencies should be in
 separate modules, possibly with <code>ServideLoader</code> abstractions introduced in the core 
 (e.g. <code>BodyAdapter</code>,<code>BodyDecoder</code>).</p>
+<h3 id="version-ranges">Version Ranges<a class="headerlink" href="#version-ranges" title="Permanent link">&para;</a></h3>
+<p>Integration modules (e.g., <code>methanol-jackson</code>) declare version ranges for their dependencies to give users flexibility:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># gradle/libs.versions.toml</span>
+<span class="n">jackson</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;[2.13.0,3)&quot;</span>
+<span class="n">gson</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;[2.13.1,3)&quot;</span>
+</code></pre></div>
+<p>By default, Gradle resolves to the <strong>latest</strong> version in the range. However, we need to ensure code actually compiles and works with the <strong>minimum</strong> versions declared.</p>
+<p>The <code>min-version-test</code> convention plugin creates a separate <code>minVersionTest</code> task that:</p>
+<ol>
+<li>Creates a new source set (<code>minVersionTest</code>) with its own configurations.</li>
+<li>Forces all version ranges to resolve to their minimum versions.</li>
+<li>Runs the same tests as the regular <code>test</code> task.</li>
+</ol>
+<div class="highlight"><pre><span></span><code><span class="c1"># Normal test: uses latest Jackson</span>
+./gradlew<span class="w"> </span>:methanol-jackson:test
+
+<span class="c1"># Minimum version test: uses minimum Jackson</span>
+./gradlew<span class="w"> </span>:methanol-jackson:minVersionTest
+</code></pre></div>
 <h2 id="style">Style<a class="headerlink" href="#style" title="Permanent link">&para;</a></h2>
 <p>The project mostly adheres to the <a href="https://google.github.io/styleguide/javaguide.html">Google Style Guide</a>. Changes are expected to
 be consistent regarding key style aspects (2 space indentation, 4 for continuation, etc). It is
