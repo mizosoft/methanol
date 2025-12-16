@@ -123,7 +123,7 @@ public abstract class AbstractSubscription<T> implements Subscription {
 
     // If this subscription is part of a chain and the parent is a JDK subscription, a "subscription
     // cancelled" or "stream X cancelled" exception may be signalled by JDK when this subscription
-    // is cancelled (and hence parent's). It is unnecessary to log such exception.
+    // is cancelled (and hence parent's). It is unnecessary to process such exception.
     if ((sync & CANCELLED) != 0 && isBenignException(exception)) {
       return;
     }
@@ -132,11 +132,16 @@ public abstract class AbstractSubscription<T> implements Subscription {
     // maintained by two sides: producer (this method) and consumer (terminal methods like cancel(),
     // cancelOnError(...) and cancelOnComplete(...)).
     boolean produced;
+    int s = 0;
     if ((produced = PENDING_EXCEPTION.compareAndSet(this, null, exception))
-        && (getAndBitwiseOrSync(RUNNING | KEEP_ALIVE | ERROR) & (RUNNING | CANCELLED)) == 0) {
+        && (s = getAndBitwiseOrSync(RUNNING | KEEP_ALIVE | ERROR) & (RUNNING | CANCELLED)) == 0) {
       fire();
     } else if (!produced) {
       FlowSupport.onDroppedException(exception);
+    } else if ((s & CANCELLED) != 0) {
+      // If produced but the subscription is cancelled, the exception could potentially be missed,
+      // so we make sure it is consumed.
+      consumePendingException();
     }
   }
 
