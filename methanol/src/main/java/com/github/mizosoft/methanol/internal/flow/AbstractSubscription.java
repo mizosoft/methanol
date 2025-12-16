@@ -31,6 +31,7 @@ import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
+import java.util.Locale;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Flow.Subscriber;
 import java.util.concurrent.Flow.Subscription;
@@ -120,15 +121,27 @@ public abstract class AbstractSubscription<T> implements Subscription {
   public void fireOrKeepAliveOnError(Throwable exception) {
     requireNonNull(exception);
 
+    // If this subscription is part of a chain and the parent is a JDK subscription, a "subscription
+    // cancelled" or "stream X cancelled" exception may be signalled by JDK when this subscription
+    // is cancelled (and hence parent's). It is unnecessary to process such exception.
+    if ((sync & CANCELLED) != 0 && isBenignException(exception)) {
+      return;
+    }
+
     // Make sure exceptions are reported even if they can't be passed on downstream. This is
     // maintained by two sides: producer (this method) and consumer (terminal methods like cancel(),
     // cancelOnError(...) and cancelOnComplete(...)).
     boolean produced;
+    int s = 0;
     if ((produced = PENDING_EXCEPTION.compareAndSet(this, null, exception))
-        && (getAndBitwiseOrSync(RUNNING | KEEP_ALIVE | ERROR) & (RUNNING | CANCELLED)) == 0) {
+        && (s = getAndBitwiseOrSync(RUNNING | KEEP_ALIVE | ERROR) & (RUNNING | CANCELLED)) == 0) {
       fire();
     } else if (!produced) {
       FlowSupport.onDroppedException(exception);
+    } else if ((s & CANCELLED) != 0) {
+      // If produced but the subscription is cancelled, the exception could potentially be missed,
+      // so we make sure it is consumed.
+      consumePendingException();
     }
   }
 
@@ -184,6 +197,22 @@ public abstract class AbstractSubscription<T> implements Subscription {
     if (exception != null && exception != ConsumedPendingException.INSTANCE) {
       FlowSupport.onDroppedException(exception);
     }
+  }
+
+  /**
+   * Returns true if the given exception is benign and hence can be ignored if received after the
+   * subscription is cancelled.
+   */
+  private static boolean isBenignException(Throwable exception) {
+    // Check for JDK's "subscription cancelled" or "stream X cancelled" exception messages.
+    for (var t = exception; t != null; t = t.getCause()) {
+      var msg = t.getMessage().toLowerCase(Locale.ROOT);
+      if ((msg.startsWith("subscription") || msg.startsWith("stream"))
+          && msg.endsWith("cancelled")) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
