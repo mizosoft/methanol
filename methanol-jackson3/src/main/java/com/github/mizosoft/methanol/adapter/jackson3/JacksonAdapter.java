@@ -30,7 +30,6 @@ import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.UncheckedIOException;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodySubscriber;
@@ -38,6 +37,7 @@ import java.net.http.HttpResponse.BodySubscribers;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Supplier;
+import tools.jackson.core.exc.JacksonIOException;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.ObjectReader;
 import tools.jackson.databind.ObjectWriter;
@@ -67,18 +67,12 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
     @Override
     public <T> BodyPublisher toBody(T value, TypeRef<T> typeRef, Hints hints) {
       requireSupport(typeRef, hints);
-      byte[] bytes;
       var objectWriter = writerFactory.createWriter(mapper, typeRef);
-      try {
-        bytes = getBytes(objectWriter, value, hints.mediaTypeOrAny().charsetOrUtf8());
-      } catch (IOException e) {
-        throw new UncheckedIOException(e);
-      }
+      byte[] bytes = getBytes(objectWriter, value, hints.mediaTypeOrAny().charsetOrUtf8());
       return attachMediaType(BodyPublishers.ofByteArray(bytes), hints.mediaTypeOrAny());
     }
 
-    abstract byte[] getBytes(ObjectWriter objectWriter, Object value, Charset charset)
-        throws IOException;
+    abstract byte[] getBytes(ObjectWriter objectWriter, Object value, Charset charset);
   }
 
   static final class TextFormatEncoder extends AbstractEncoder {
@@ -88,7 +82,7 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
     }
 
     @Override
-    byte[] getBytes(ObjectWriter objectWriter, Object value, Charset charset) throws IOException {
+    byte[] getBytes(ObjectWriter objectWriter, Object value, Charset charset) {
       if (charset.equals(StandardCharsets.UTF_8)) {
         return objectWriter.writeValueAsBytes(value); // Optimized for UTF-8.
       } else {
@@ -104,7 +98,7 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
     }
 
     @Override
-    byte[] getBytes(ObjectWriter objectWriter, Object value, Charset ignored) throws IOException {
+    byte[] getBytes(ObjectWriter objectWriter, Object value, Charset ignored) {
       return objectWriter.writeValueAsBytes(value);
     }
   }
@@ -135,11 +129,7 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
     }
 
     private <T> ObjectReader createReaderSafely(TypeRef<T> typeRef) {
-      try {
-        return readerFactory.createReader(mapper, typeRef);
-      } catch (tools.jackson.databind.exc.InvalidDefinitionException e) {
-        throw new UnsupportedOperationException(e);
-      }
+      return readerFactory.createReader(mapper, typeRef);
     }
 
     @Override
@@ -170,11 +160,7 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
     @Override
     <T> T readValueUnchecked(
         ObjectReader objectReader, byte[] bytes, TypeRef<T> typeRef, Charset charset) {
-      try {
-        return typeRef.uncheckedCast(objectReader.readValue(new String(bytes, charset)));
-      } catch (tools.jackson.databind.exc.InvalidDefinitionException e) {
-        throw new UnsupportedOperationException(e);
-      }
+      return typeRef.uncheckedCast(objectReader.readValue(new String(bytes, charset)));
     }
 
     @Override
@@ -182,10 +168,8 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
         ObjectReader objectReader, InputStream inputStream, TypeRef<T> typeRef, Charset charset) {
       try (var reader = new InputStreamReader(inputStream, charset)) {
         return typeRef.uncheckedCast(objectReader.readValue(reader));
-      } catch (tools.jackson.databind.exc.InvalidDefinitionException e) {
-        throw new UnsupportedOperationException(e);
       } catch (IOException e) {
-        throw new UncheckedIOException(e);
+        throw JacksonIOException.construct(e);
       }
     }
   }
@@ -199,21 +183,13 @@ abstract class JacksonAdapter extends AbstractBodyAdapter {
     @Override
     <T> T readValueUnchecked(
         ObjectReader objectReader, byte[] bytes, TypeRef<T> typeRef, Charset charset) {
-      try {
-        return typeRef.uncheckedCast(objectReader.readValue(bytes));
-      } catch (tools.jackson.databind.exc.InvalidDefinitionException e) {
-        throw new UnsupportedOperationException(e);
-      }
+      return typeRef.uncheckedCast(objectReader.readValue(bytes));
     }
 
     @Override
     <T> T readValueUnchecked(
         ObjectReader objectReader, InputStream inputStream, TypeRef<T> typeRef, Charset charset) {
-      try {
-        return typeRef.uncheckedCast(objectReader.readValue(inputStream));
-      } catch (tools.jackson.databind.exc.InvalidDefinitionException e) {
-        throw new UnsupportedOperationException(e);
-      }
+      return typeRef.uncheckedCast(objectReader.readValue(inputStream));
     }
   }
 }

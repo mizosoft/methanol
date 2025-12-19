@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,18 +20,24 @@
  * SOFTWARE.
  */
 
-import com.github.mizosoft.methanol.BodyAdapter;
+package com.github.mizosoft.methanol.adapter.jackson3.flux;
 
-/**
- * Contains <a href="https://github.com/FasterXML/jackson">Jackson</a> {@code &} <a
- * href="https://projectreactor.io/">Project Reactor</a> streaming {@link BodyAdapter adapters}.
- */
-module methanol.adapter.jackson.flux {
-  requires transitive methanol;
-  requires transitive com.fasterxml.jackson.databind;
-  requires reactor.core;
-  requires org.reactivestreams;
-  requires static org.checkerframework.checker.qual;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ser.std.StdSerializer;
 
-  exports com.github.mizosoft.methanol.adapter.jackson.flux;
+final class CompactPointSerializer extends StdSerializer<Point> {
+  CompactPointSerializer() {
+    super(Point.class);
+  }
+
+  @Override
+  public void serialize(Point value, JsonGenerator gen, SerializationContext provider)
+      throws JacksonException {
+    gen.writeStartArray();
+    gen.writeNumber(value.x);
+    gen.writeNumber(value.y);
+    gen.writeEndArray();
+  }
 }
