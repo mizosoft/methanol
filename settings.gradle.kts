@@ -1,5 +1,5 @@
 import java.io.FileNotFoundException
-import java.util.Properties
+import java.util.*
 
 rootProject.name = "methanol-parent"
 
@@ -8,7 +8,9 @@ include("methanol")
 include("methanol-testing")
 include("methanol-gson")
 include("methanol-jackson")
+include("methanol-jackson3")
 include("methanol-jackson-flux")
+//include("methanol-jackson3-flux")
 include("methanol-protobuf")
 include("methanol-jaxb")
 include("methanol-jaxb-jakarta")

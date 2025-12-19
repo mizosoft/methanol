@@ -46,11 +46,13 @@ module methanol {
       methanol.adapter.jackson,
       methanol.adapter.jackson.flux,
       methanol.redis,
-      methanol.testing;
+      methanol.testing,
+      methanol.adapter.jackson3.flux;
   exports com.github.mizosoft.methanol.internal.extensions to
       methanol.adapter.jackson,
       methanol.adapter.jackson.flux,
-      methanol.kotlin;
+      methanol.kotlin,
+      methanol.adapter.jackson3.flux;
   exports com.github.mizosoft.methanol.internal.cache to
       methanol.redis,
       methanol.testing;

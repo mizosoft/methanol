@@ -1,0 +1,118 @@
+/*
+ * Copyright (c) 2025 Moataz Hussein
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+package com.github.mizosoft.methanol.adapter.jackson3;
+
+import static com.github.mizosoft.methanol.MediaType.APPLICATION_JSON;
+import static com.github.mizosoft.methanol.MediaType.APPLICATION_XHTML_XML;
+import static com.github.mizosoft.methanol.MediaType.APPLICATION_XML;
+import static com.github.mizosoft.methanol.adapter.jackson3.JacksonAdapterFactory.createDecoder;
+import static com.github.mizosoft.methanol.adapter.jackson3.JacksonAdapterFactory.createEncoder;
+import static com.github.mizosoft.methanol.adapter.jackson3.JacksonAdapterFactory.createJsonDecoder;
+import static com.github.mizosoft.methanol.adapter.jackson3.JacksonAdapterFactory.createJsonEncoder;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import com.github.mizosoft.methanol.BodyAdapter;
+import com.github.mizosoft.methanol.MediaType;
+import com.github.mizosoft.methanol.adapter.AbstractBodyAdapter;
+import java.lang.reflect.InvocationTargetException;
+import java.util.Set;
+import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
+
+class JacksonAdapterFactoryTest {
+  @Test
+  void jsonEncoderHasApplicationJsonMediaType() {
+    assertThat(mediaTypes(createJsonEncoder())).containsOnly(APPLICATION_JSON);
+    assertThat(mediaTypes(createJsonDecoder())).containsOnly(APPLICATION_JSON);
+  }
+
+  @Test
+  void adapterWithCustomMediaTypes() {
+    assertThat(
+            mediaTypes(createEncoder(new ObjectMapper(), APPLICATION_XML, APPLICATION_XHTML_XML)))
+        .containsOnly(APPLICATION_XML, APPLICATION_XHTML_XML);
+    assertThat(
+            mediaTypes(
+                JacksonAdapterFactory.createDecoder(
+                    new ObjectMapper(), APPLICATION_XML, APPLICATION_XHTML_XML)))
+        .containsOnly(APPLICATION_XML, APPLICATION_XHTML_XML);
+    assertThat(
+            mediaTypes(
+                JacksonAdapterFactory.createEncoder(
+                    new ObjectMapper(), APPLICATION_XML, APPLICATION_XHTML_XML)))
+        .containsOnly(APPLICATION_XML, APPLICATION_XHTML_XML);
+    assertThat(
+            mediaTypes(
+                JacksonAdapterFactory.createDecoder(
+                    new ObjectMapper(), APPLICATION_XML, APPLICATION_XHTML_XML)))
+        .containsOnly(APPLICATION_XML, APPLICATION_XHTML_XML);
+  }
+
+  @Test
+  void adaptersWithCustomCodecFactoryAndMediaTypes() {
+    assertThat(
+            mediaTypes(
+                JacksonAdapterFactory.createEncoder(
+                    new ObjectMapper(),
+                    ObjectWriterFactory.getDefault(),
+                    APPLICATION_XML,
+                    APPLICATION_XHTML_XML)))
+        .containsOnly(APPLICATION_XML, APPLICATION_XHTML_XML);
+    assertThat(
+            mediaTypes(
+                createDecoder(
+                    new ObjectMapper(),
+                    ObjectReaderFactory.getDefault(),
+                    APPLICATION_XML,
+                    APPLICATION_XHTML_XML)))
+        .containsOnly(APPLICATION_XML, APPLICATION_XHTML_XML);
+    assertThat(
+            mediaTypes(
+                JacksonAdapterFactory.createEncoder(
+                    new ObjectMapper(),
+                    ObjectWriterFactory.getDefault(),
+                    APPLICATION_XML,
+                    APPLICATION_XHTML_XML)))
+        .containsOnly(APPLICATION_XML, APPLICATION_XHTML_XML);
+    assertThat(
+            mediaTypes(
+                JacksonAdapterFactory.createDecoder(
+                    new ObjectMapper(),
+                    ObjectReaderFactory.getDefault(),
+                    APPLICATION_XML,
+                    APPLICATION_XHTML_XML)))
+        .containsOnly(APPLICATION_XML, APPLICATION_XHTML_XML);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Set<MediaType> mediaTypes(BodyAdapter adapter) {
+    assertThat(adapter).isInstanceOf(AbstractBodyAdapter.class);
+    try {
+      var method = AbstractBodyAdapter.class.getDeclaredMethod("compatibleMediaTypes");
+      method.setAccessible(true);
+      return (Set<MediaType>) method.invoke(adapter);
+    } catch (InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
+      throw new RuntimeException(e);
+    }
+  }
+}
