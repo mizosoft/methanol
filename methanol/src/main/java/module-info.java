@@ -43,15 +43,13 @@ module methanol {
   // Qualified exports should be mapped to OSGI Export-Package & x-friends attrs in the build
   // script.
   exports com.github.mizosoft.methanol.internal.flow to
-      methanol.adapter.jackson,
-      methanol.adapter.jackson.flux,
       methanol.redis,
       methanol.testing,
+      methanol.adapter.jackson.flux,
       methanol.adapter.jackson3.flux;
   exports com.github.mizosoft.methanol.internal.extensions to
-      methanol.adapter.jackson,
-      methanol.adapter.jackson.flux,
       methanol.kotlin,
+      methanol.adapter.jackson.flux,
       methanol.adapter.jackson3.flux;
   exports com.github.mizosoft.methanol.internal.cache to
       methanol.redis,
