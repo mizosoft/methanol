@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,18 +20,21 @@
  * SOFTWARE.
  */
 
-import com.github.mizosoft.methanol.BodyAdapter;
+package com.github.mizosoft.methanol.adapter.jackson3;
 
-/**
- * Contains <a href="https://github.com/FasterXML/jackson">Jackson</a> {@code &} <a
- * href="https://projectreactor.io/">Project Reactor</a> streaming {@link BodyAdapter adapters}.
- */
-module methanol.adapter.jackson.flux {
-  requires transitive methanol;
-  requires transitive com.fasterxml.jackson.databind;
-  requires reactor.core;
-  requires org.reactivestreams;
-  requires static org.checkerframework.checker.qual;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.deser.std.StdDeserializer;
 
-  exports com.github.mizosoft.methanol.adapter.jackson.flux;
+final class TreeNodePointDeserializer extends StdDeserializer<Point> {
+  TreeNodePointDeserializer() {
+    super(Point.class);
+  }
+
+  @Override
+  public Point deserialize(JsonParser p, DeserializationContext ctxt) {
+    var node = p.<JsonNode>readValueAsTree();
+    return new Point(node.get("x").asInt(), node.get("y").asInt());
+  }
 }

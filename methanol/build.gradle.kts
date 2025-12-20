@@ -118,8 +118,8 @@ tasks.jar {
       # Export internal packages that have qualified exports in module-info.java.
       # Use x-friends to indicate which bundles should have access (matching JPMS qualified exports).
       Export-Package: \
-        com.github.mizosoft.methanol.internal.flow;x-internal:=true;x-friends:="methanol-jackson,methanol-jackson-flux,methanol-redis,methanol-testing";version=${project.version}, \
-        com.github.mizosoft.methanol.internal.extensions;x-internal:=true;x-friends:="methanol-jackson,methanol-jackson-flux,methanol-kotlin";version=${project.version}, \
+        com.github.mizosoft.methanol.internal.flow;x-internal:=true;x-friends:="methanol-redis,methanol-testing,methanol-jackson-flux,methanol-jackson3-flux";version=${project.version}, \
+        com.github.mizosoft.methanol.internal.extensions;x-internal:=true;x-friends:="methanol-kotlin,methanol-jackson-flux,methanol-jackson3-flux";version=${project.version}, \
         com.github.mizosoft.methanol.internal.cache;x-internal:=true;x-friends:="methanol-redis,methanol-testing";version=${project.version}, \
         com.github.mizosoft.methanol.internal.function;x-internal:=true;x-friends:="methanol-testing,methanol-brotli";version=${project.version}, \
         com.github.mizosoft.methanol.internal;x-internal:=true;x-friends:="methanol-redis,methanol-testing,methanol-jaxb-jakarta,methanol-jaxb,methanol-brotli";version=${project.version}, \

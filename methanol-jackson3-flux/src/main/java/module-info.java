@@ -26,12 +26,12 @@ import com.github.mizosoft.methanol.BodyAdapter;
  * Contains <a href="https://github.com/FasterXML/jackson">Jackson</a> {@code &} <a
  * href="https://projectreactor.io/">Project Reactor</a> streaming {@link BodyAdapter adapters}.
  */
-module methanol.adapter.jackson.flux {
+module methanol.adapter.jackson3.flux {
   requires transitive methanol;
-  requires transitive com.fasterxml.jackson.databind;
+  requires transitive tools.jackson.databind;
   requires reactor.core;
   requires org.reactivestreams;
   requires static org.checkerframework.checker.qual;
 
-  exports com.github.mizosoft.methanol.adapter.jackson.flux;
+  exports com.github.mizosoft.methanol.adapter.jackson3.flux;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,18 +20,24 @@
  * SOFTWARE.
  */
 
-import com.github.mizosoft.methanol.BodyAdapter;
+package com.github.mizosoft.methanol.adapter.jackson3;
 
-/**
- * Contains <a href="https://github.com/FasterXML/jackson">Jackson</a> {@code &} <a
- * href="https://projectreactor.io/">Project Reactor</a> streaming {@link BodyAdapter adapters}.
- */
-module methanol.adapter.jackson.flux {
-  requires transitive methanol;
-  requires transitive com.fasterxml.jackson.databind;
-  requires reactor.core;
-  requires org.reactivestreams;
-  requires static org.checkerframework.checker.qual;
+import static org.assertj.core.api.Assertions.assertThat;
 
-  exports com.github.mizosoft.methanol.adapter.jackson.flux;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.deser.std.StdDeserializer;
+
+final class CompactPointDeserializer extends StdDeserializer<Point> {
+  CompactPointDeserializer() {
+    super(Point.class);
+  }
+
+  @Override
+  public Point deserialize(JsonParser p, DeserializationContext ctxt) {
+    assertThat(p.isExpectedStartArrayToken()).isTrue();
+    var point = new Point(p.nextIntValue(-1), p.nextIntValue(-1));
+    p.nextToken();
+    return point;
+  }
 }

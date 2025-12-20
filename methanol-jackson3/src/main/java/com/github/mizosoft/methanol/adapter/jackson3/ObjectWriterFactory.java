@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,18 +20,18 @@
  * SOFTWARE.
  */
 
-import com.github.mizosoft.methanol.BodyAdapter;
+package com.github.mizosoft.methanol.adapter.jackson3;
 
-/**
- * Contains <a href="https://github.com/FasterXML/jackson">Jackson</a> {@code &} <a
- * href="https://projectreactor.io/">Project Reactor</a> streaming {@link BodyAdapter adapters}.
- */
-module methanol.adapter.jackson.flux {
-  requires transitive methanol;
-  requires transitive com.fasterxml.jackson.databind;
-  requires reactor.core;
-  requires org.reactivestreams;
-  requires static org.checkerframework.checker.qual;
+import com.github.mizosoft.methanol.TypeRef;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectWriter;
 
-  exports com.github.mizosoft.methanol.adapter.jackson.flux;
+/** A strategy for creating an {@link ObjectWriter} for a given type. */
+public interface ObjectWriterFactory {
+  /** Uses the given mapper to create an {@link ObjectWriter} for the given type. */
+  ObjectWriter createWriter(ObjectMapper mapper, TypeRef<?> type);
+
+  static ObjectWriterFactory getDefault() {
+    return (mapper, type) -> mapper.writerFor(mapper.constructType(type.type()));
+  }
 }

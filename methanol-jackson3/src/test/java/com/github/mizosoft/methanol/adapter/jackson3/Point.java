@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,18 +20,40 @@
  * SOFTWARE.
  */
 
-import com.github.mizosoft.methanol.BodyAdapter;
+package com.github.mizosoft.methanol.adapter.jackson3;
 
-/**
- * Contains <a href="https://github.com/FasterXML/jackson">Jackson</a> {@code &} <a
- * href="https://projectreactor.io/">Project Reactor</a> streaming {@link BodyAdapter adapters}.
- */
-module methanol.adapter.jackson.flux {
-  requires transitive methanol;
-  requires transitive com.fasterxml.jackson.databind;
-  requires reactor.core;
-  requires org.reactivestreams;
-  requires static org.checkerframework.checker.qual;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Objects;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
-  exports com.github.mizosoft.methanol.adapter.jackson.flux;
+public final class Point {
+  public final int x;
+  public final int y;
+
+  @JsonCreator
+  public Point(@JsonProperty("x") int x, @JsonProperty("y") int y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  @Override
+  public boolean equals(@Nullable Object obj) {
+    if (!(obj instanceof Point)) {
+      return false;
+    }
+
+    var other = (Point) obj;
+    return x == other.x && y == other.y;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(x, y);
+  }
+
+  @Override
+  public String toString() {
+    return "Point[x=" + x + ", y=" + y + "]";
+  }
 }

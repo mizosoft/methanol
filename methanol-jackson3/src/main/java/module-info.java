@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Moataz Hussein
+ * Copyright (c) 2025 Moataz Hussein
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,15 +23,14 @@
 import com.github.mizosoft.methanol.BodyAdapter;
 
 /**
- * Contains <a href="https://github.com/FasterXML/jackson">Jackson</a> {@code &} <a
- * href="https://projectreactor.io/">Project Reactor</a> streaming {@link BodyAdapter adapters}.
+ * Contains <a href="https://github.com/FasterXML/jackson">Jackson</a> {@link BodyAdapter adapters}.
  */
-module methanol.adapter.jackson.flux {
+module methanol.adapter.jackson3 {
   requires transitive methanol;
-  requires transitive com.fasterxml.jackson.databind;
-  requires reactor.core;
-  requires org.reactivestreams;
+  requires transitive tools.jackson.databind;
+  requires transitive com.fasterxml.jackson.annotation;
   requires static org.checkerframework.checker.qual;
+  requires static com.google.errorprone.annotations;
 
-  exports com.github.mizosoft.methanol.adapter.jackson.flux;
+  exports com.github.mizosoft.methanol.adapter.jackson3;
 }

@@ -4,12 +4,14 @@ plugins {
 }
 
 // List of modules that should have OSGI metadata.
-val osgiModules = listOf(
+val osgiModules = setOf(
   "methanol",
   "methanol-brotli",
   "methanol-gson",
   "methanol-jackson",
+  "methanol-jackson3",
   "methanol-jackson-flux",
+  "methanol-jackson3-flux",
   "methanol-jaxb",
   "methanol-jaxb-jakarta",
   "methanol-kotlin",
@@ -58,6 +60,7 @@ tasks.withType<JavaCompile> {
   onlyIf {
     java.toolchain.languageVersion.get().asInt() >= 17
   }
+  options.release = 17 // Override to not fail for non-Java 17 dependencies.
 }
 
 tasks.withType<Test> {
