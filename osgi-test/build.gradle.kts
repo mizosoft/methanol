@@ -63,5 +63,13 @@ tasks.test {
       "com.github.mizosoft.methanol.osgi.test.version",
       project.version.toString().replace("-", ".")
     )
+
+    // Set Java version for OSGI resolution. JavaSE-17 value is required for Jackson 3.
+    val javaVersion = if (java.toolchain.languageVersion.get().canCompileOrRun(17)) {
+      "JavaSE-17"
+    } else {
+      "JavaSE-11"
+    }
+    systemProperty("com.github.mizosoft.methanol.osgi.test.javaVersion", javaVersion)
   }
 }

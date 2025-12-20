@@ -61,7 +61,8 @@ class OsgiResolutionTest {
           .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
   private static final String RESOLVE_OSGI_FRAMEWORK = "org.eclipse.osgi";
-  private static final String RESOLVE_JAVA_VERSION = "JavaSE-11";
+  private static final String RESOLVE_JAVA_VERSION =
+      System.getProperty("com.github.mizosoft.methanol.osgi.test.javaVersion", "JavaSE-11");
   private static final String REPO_NAME = "MethanolOsgiTest";
 
   private Path workspaceDir;
