@@ -65,7 +65,6 @@ checkerframework-qual = { module = "org.checkerframework:checker-qual", version.
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
 jackson3-databind = { module = "tools.jackson.core:jackson-databind", version.ref = "jackson3" }
-jackson3-core = { module = "tools.jackson.core:jackson-core", version.ref = "jackson3" }
 protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
 protobuf-compiler = { module = "com.google.protobuf:protoc", version.ref = "protobuf" }
 errorprone = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone" }
