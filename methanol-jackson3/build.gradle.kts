@@ -18,3 +18,15 @@ dependencies {
   testImplementation(libs.jackson3.protobuf)
   testImplementation(libs.jackson3.avro)
 }
+
+tasks.withType<JavaCompile> {
+  onlyIf {
+    java.toolchain.languageVersion.get().asInt() >= 17
+  }
+}
+
+tasks.withType<Test> {
+  onlyIf {
+    java.toolchain.languageVersion.get().asInt() >= 17
+  }
+}

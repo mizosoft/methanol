@@ -17,3 +17,15 @@ dependencies {
   api(libs.reactor.core)
   implementation(libs.reactivestreams)
 }
+
+tasks.withType<JavaCompile> {
+  onlyIf {
+    java.toolchain.languageVersion.get().asInt() >= 17
+  }
+}
+
+tasks.withType<Test> {
+  onlyIf {
+    java.toolchain.languageVersion.get().asInt() >= 17
+  }
+}
