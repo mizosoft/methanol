@@ -4,14 +4,12 @@ plugins {
 }
 
 // List of modules that should have OSGI metadata.
-val osgiModules = setOf(
+val java11OsgiModules = setOf(
   "methanol",
   "methanol-brotli",
   "methanol-gson",
   "methanol-jackson",
-  "methanol-jackson3",
   "methanol-jackson-flux",
-  "methanol-jackson3-flux",
   "methanol-jaxb",
   "methanol-jaxb-jakarta",
   "methanol-kotlin",
@@ -19,6 +17,18 @@ val osgiModules = setOf(
   "methanol-protobuf",
   "methanol-redis"
 )
+
+// Jackson 3 modules require Java 17+
+val otherOsgiModules = setOf(
+  "methanol-jackson3",
+  "methanol-jackson3-flux"
+)
+
+val osgiModules = if (java.toolchain.languageVersion.get().canCompileOrRun(17)) {
+  java11OsgiModules + otherOsgiModules
+} else {
+  java11OsgiModules
+}
 
 dependencies {
   osgiModules.forEach { module ->
@@ -53,17 +63,5 @@ tasks.test {
       "com.github.mizosoft.methanol.osgi.test.version",
       project.version.toString().replace("-", ".")
     )
-  }
-}
-
-tasks.withType<JavaCompile> {
-  onlyIf {
-    java.toolchain.languageVersion.get().asInt() >= 17
-  }
-}
-
-tasks.withType<Test> {
-  onlyIf {
-    java.toolchain.languageVersion.get().asInt() >= 17
   }
 }
