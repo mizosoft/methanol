@@ -8,7 +8,7 @@ plugins {
 }
 
 tasks.withType<JavaCompile> {
-  options.release = 17
+  options.release = 17 // Jackson 3 requires Java 17+.
 }
 
 dependencies {
