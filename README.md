@@ -25,7 +25,7 @@ Build time prerequisites in [CONTRIBUTING](CONTRIBUTING.md).
 ### Gradle
 
 ```kotlin
-implementation("com.github.mizosoft.methanol:methanol:1.8.4")
+implementation("com.github.mizosoft.methanol:methanol:1.9.0")
 ```
 
 ### Maven
@@ -33,7 +33,7 @@ implementation("com.github.mizosoft.methanol:methanol:1.8.4")
 <dependency>
     <groupId>com.github.mizosoft.methanol</groupId>
     <artifactId>methanol</artifactId>
-    <version>1.8.4</version>
+    <version>1.9.0</version>
 </dependency>
 ```
 

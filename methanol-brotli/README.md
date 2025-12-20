@@ -7,7 +7,7 @@ Provides [brotli][brotli] decompression.
 ### Gradle
 
 ```gradle
-implementation("com.github.mizosoft.methanol:methanol-brotli:1.8.4")
+implementation("com.github.mizosoft.methanol:methanol-brotli:1.9.0")
 ```
 
 ### Maven
@@ -16,7 +16,7 @@ implementation("com.github.mizosoft.methanol:methanol-brotli:1.8.4")
 <dependency>
   <groupId>com.github.mizosoft.methanol</groupId>
   <artifactId>methanol-brotli</artifactId>
-    <version>1.8.4</version>
+    <version>1.9.0</version>
 </dependency>
 ```
 
@@ -41,7 +41,7 @@ The library is published with multiple JAR variants to support different use cas
 #### 1. Default (Fat JAR)
 
 ```gradle
-implementation("com.github.mizosoft.methanol:methanol-brotli:1.8.4")
+implementation("com.github.mizosoft.methanol:methanol-brotli:1.9.0")
 ```
 
 - **Includes:** Java classes + native libraries for all supported platforms
@@ -50,7 +50,7 @@ implementation("com.github.mizosoft.methanol:methanol-brotli:1.8.4")
 #### 2. Platform-specific JAR
 
 ```gradle
-implementation("com.github.mizosoft.methanol:methanol-brotli:1.8.4") {
+implementation("com.github.mizosoft.methanol:methanol-brotli:1.9.0") {
   artifact {
     classifier = "linux-x86-64"
   }
@@ -64,7 +64,7 @@ implementation("com.github.mizosoft.methanol:methanol-brotli:1.8.4") {
 #### 3. Base JAR (No natives)
 
 ```gradle
-implementation("com.github.mizosoft.methanol:methanol-brotli:1.8.4") {
+implementation("com.github.mizosoft.methanol:methanol-brotli:1.9.0") {
   artifact {
     classifier = "base"
   }

@@ -1,5 +1,39 @@
 # Change Log
 
+## Version 1.9.0
+
+* Added [RetryInterceptor](https://mizosoft.github.io/methanol/retrying_requests/) ([#137](https://github.com/mizosoft/methanol/issues/137)),
+  with which you can retry requests with declaratively specified conditions.
+  ```java
+  var client =
+    Methanol.newBuilder()
+        .interceptor(
+            RetryInterceptor.newBuilder()
+                .maxRetries(3)
+                .onException(ConnectException.class)
+                .onStatus(HttpStatus::isServerError)
+                .backoff(
+                    RetryInterceptor.BackoffStrategy.exponential(
+                            Duration.ofMillis(100), Duration.ofSeconds(5))
+                        .withJitter())
+                .build())
+        .build();
+  ```
+  There's also a corresponding [Kotlin DSL](https://mizosoft.github.io/methanol/kotlin/#retrying-requests).
+
+* Fixed ([#146](https://github.com/mizosoft/methanol/issues/146)). Methanol JARs now play well with OSGI environments.
+
+* Added brotli support for MacOS & ARM architectures. Support for `x86-32` platforms has been dropped, however. In addition to the fat JAR that has natives bundled for
+  all supported platforms, a JAR for each platform is published with only the corresponding native, that is in addition to a base JAR with no natives, which you can use for custom native builds. 
+  Checkout [the docs](https://mizosoft.github.io/methanol/brotli/) for more.
+
+* Added support for [Jackson 3](https://github.com/FasterXML/jackson/wiki/Jackson-Release-3.0) through additional modules: `methanol-jackson3` & `methanol-jackson3-flux`. 
+  Support for Jackson 2 will continue through the older modules.
+
+* Versions of dependencies of integration modules (e.g. methanol-jackson) are now defined in [ranges](https://docs.gradle.org/current/userguide/dependency_versions.html#sec:maven-style-range).
+  This allows builds to pull the latest version of the target library without necessarily updating Methanol to the next release.
+  If you want to use a specific version, you can explicitly declare it provided it is within the range. The ranges are also reflected on OSGI metadata.
+
 ## Version 1.8.4
 
 * Fixed [#129](https://github.com/mizosoft/methanol/issues/129), where streaming large files through `WritableBodyPublisher` on slow networks caused high memory usage.

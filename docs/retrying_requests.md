@@ -74,7 +74,7 @@ var client =
     Methanol.newBuilder()
         .interceptor(
             RetryInterceptor.newBuilder()
-                .maxRetries(10)
+                .maxRetries(3)
                 .onException(ConnectException.class)
                 .onStatus(HttpStatus::isServerError)
                 .backoff( // We know our internal service uses the Retry-After header, so use that for backing off.
