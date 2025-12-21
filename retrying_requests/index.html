@@ -1345,7 +1345,7 @@ to apply a certain <code>RetryInterceptor</code> to.</p>
 <span class="w">    </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
 <span class="w">        </span><span class="p">.</span><span class="na">interceptor</span><span class="p">(</span>
 <span class="w">            </span><span class="n">RetryInterceptor</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
-<span class="w">                </span><span class="p">.</span><span class="na">maxRetries</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+<span class="w">                </span><span class="p">.</span><span class="na">maxRetries</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
 <span class="w">                </span><span class="p">.</span><span class="na">onException</span><span class="p">(</span><span class="n">ConnectException</span><span class="p">.</span><span class="na">class</span><span class="p">)</span>
 <span class="w">                </span><span class="p">.</span><span class="na">onStatus</span><span class="p">(</span><span class="n">HttpStatus</span><span class="p">::</span><span class="n">isServerError</span><span class="p">)</span>
 <span class="w">                </span><span class="p">.</span><span class="na">backoff</span><span class="p">(</span><span class="w"> </span><span class="c1">// We know our internal service uses the Retry-After header, so use that for backing off.</span>

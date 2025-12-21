@@ -1464,13 +1464,13 @@
 <p>Provides <a href="https://github.com/google/brotli">brotli</a> decompression.</p>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
 <h3 id="gradle">Gradle<a class="headerlink" href="#gradle" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code>implementation(&quot;com.github.mizosoft.methanol:methanol-brotli:1.8.4&quot;)
+<div class="highlight"><pre><span></span><code>implementation(&quot;com.github.mizosoft.methanol:methanol-brotli:1.9.0&quot;)
 </code></pre></div>
 <h3 id="maven">Maven<a class="headerlink" href="#maven" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="nt">&lt;dependency&gt;</span>
 <span class="w">  </span><span class="nt">&lt;groupId&gt;</span>com.github.mizosoft.methanol<span class="nt">&lt;/groupId&gt;</span>
 <span class="w">  </span><span class="nt">&lt;artifactId&gt;</span>methanol-brotli<span class="nt">&lt;/artifactId&gt;</span>
-<span class="w">    </span><span class="nt">&lt;version&gt;</span>1.8.4<span class="nt">&lt;/version&gt;</span>
+<span class="w">    </span><span class="nt">&lt;version&gt;</span>1.9.0<span class="nt">&lt;/version&gt;</span>
 <span class="nt">&lt;/dependency&gt;</span>
 </code></pre></div>
 <h2 id="implementation-notes">Implementation notes<a class="headerlink" href="#implementation-notes" title="Permanent link">&para;</a></h2>
@@ -1507,14 +1507,14 @@ for each supported OS and architecture are bundled with the JAR and extracted to
 <h3 id="jar-variants">JAR variants<a class="headerlink" href="#jar-variants" title="Permanent link">&para;</a></h3>
 <p>The library is published with multiple JAR variants to support different use cases:</p>
 <h4 id="1-default-fat-jar">1. Default (Fat JAR)<a class="headerlink" href="#1-default-fat-jar" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code>implementation(&quot;com.github.mizosoft.methanol:methanol-brotli:1.8.4&quot;)
+<div class="highlight"><pre><span></span><code>implementation(&quot;com.github.mizosoft.methanol:methanol-brotli:1.9.0&quot;)
 </code></pre></div>
 <ul>
 <li><strong>Includes:</strong> Java classes + native libraries for all supported platforms</li>
 <li><strong>Use when:</strong> You want the simplest setup that works for all supported platforms and don't mind the larger JAR size (~2MB)</li>
 </ul>
 <h4 id="2-platform-specific-jar">2. Platform-specific JAR<a class="headerlink" href="#2-platform-specific-jar" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code>implementation(&quot;com.github.mizosoft.methanol:methanol-brotli:1.8.4&quot;) {
+<div class="highlight"><pre><span></span><code>implementation(&quot;com.github.mizosoft.methanol:methanol-brotli:1.9.0&quot;) {
   artifact {
     classifier = &quot;linux-x86-64&quot;
   }
@@ -1526,7 +1526,7 @@ for each supported OS and architecture are bundled with the JAR and extracted to
 <li><strong>Available classifiers:</strong> <code>linux-x86-64</code>, <code>linux-aarch64</code>, <code>macos-x86-64</code>, <code>macos-aarch64</code>, <code>windows-x86-64</code>, <code>windows-aarch64</code></li>
 </ul>
 <h4 id="3-base-jar-no-natives">3. Base JAR (No natives)<a class="headerlink" href="#3-base-jar-no-natives" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code>implementation(&quot;com.github.mizosoft.methanol:methanol-brotli:1.8.4&quot;) {
+<div class="highlight"><pre><span></span><code>implementation(&quot;com.github.mizosoft.methanol:methanol-brotli:1.9.0&quot;) {
   artifact {
     classifier = &quot;base&quot;
   }

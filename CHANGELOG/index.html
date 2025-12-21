@@ -1115,6 +1115,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#version-190" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Version 1.9.0
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#version-184" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1303,6 +1314,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#version-190" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Version 1.9.0
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#version-184" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1477,6 +1499,45 @@
 
 
 <h1 id="change-log">Change Log<a class="headerlink" href="#change-log" title="Permanent link">&para;</a></h1>
+<h2 id="version-190">Version 1.9.0<a class="headerlink" href="#version-190" title="Permanent link">&para;</a></h2>
+<ul>
+<li>
+<p>Added <a href="https://mizosoft.github.io/methanol/retrying_requests/">RetryInterceptor</a> (<a href="https://github.com/mizosoft/methanol/issues/137">#137</a>),
+  with which you can retry requests with declaratively specified conditions.
+  <div class="highlight"><pre><span></span><code><span class="kd">var</span><span class="w"> </span><span class="n">client</span><span class="w"> </span><span class="o">=</span>
+<span class="w">  </span><span class="n">Methanol</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
+<span class="w">      </span><span class="p">.</span><span class="na">interceptor</span><span class="p">(</span>
+<span class="w">          </span><span class="n">RetryInterceptor</span><span class="p">.</span><span class="na">newBuilder</span><span class="p">()</span>
+<span class="w">              </span><span class="p">.</span><span class="na">maxRetries</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+<span class="w">              </span><span class="p">.</span><span class="na">onException</span><span class="p">(</span><span class="n">ConnectException</span><span class="p">.</span><span class="na">class</span><span class="p">)</span>
+<span class="w">              </span><span class="p">.</span><span class="na">onStatus</span><span class="p">(</span><span class="n">HttpStatus</span><span class="p">::</span><span class="n">isServerError</span><span class="p">)</span>
+<span class="w">              </span><span class="p">.</span><span class="na">backoff</span><span class="p">(</span>
+<span class="w">                  </span><span class="n">RetryInterceptor</span><span class="p">.</span><span class="na">BackoffStrategy</span><span class="p">.</span><span class="na">exponential</span><span class="p">(</span>
+<span class="w">                          </span><span class="n">Duration</span><span class="p">.</span><span class="na">ofMillis</span><span class="p">(</span><span class="mi">100</span><span class="p">),</span><span class="w"> </span><span class="n">Duration</span><span class="p">.</span><span class="na">ofSeconds</span><span class="p">(</span><span class="mi">5</span><span class="p">))</span>
+<span class="w">                      </span><span class="p">.</span><span class="na">withJitter</span><span class="p">())</span>
+<span class="w">              </span><span class="p">.</span><span class="na">build</span><span class="p">())</span>
+<span class="w">      </span><span class="p">.</span><span class="na">build</span><span class="p">();</span>
+</code></pre></div>
+  There's also a corresponding <a href="https://mizosoft.github.io/methanol/kotlin/#retrying-requests">Kotlin DSL</a>.</p>
+</li>
+<li>
+<p>Fixed (<a href="https://github.com/mizosoft/methanol/issues/146">#146</a>). Methanol JARs now play well with OSGI environments.</p>
+</li>
+<li>
+<p>Added brotli support for MacOS &amp; ARM architectures. Support for <code>x86-32</code> platforms has been dropped, however. In addition to the fat JAR that has natives bundled for
+  all supported platforms, a JAR for each platform is published with only the corresponding native, that is in addition to a base JAR with no natives, which you can use for custom native builds. 
+  Checkout <a href="https://mizosoft.github.io/methanol/brotli/">the docs</a> for more.</p>
+</li>
+<li>
+<p>Added support for <a href="https://github.com/FasterXML/jackson/wiki/Jackson-Release-3.0">Jackson 3</a> through additional modules: <code>methanol-jackson3</code> &amp; <code>methanol-jackson3-flux</code>. 
+  Support for Jackson 2 will continue through the older modules.</p>
+</li>
+<li>
+<p>Versions of dependencies of integration modules (e.g. methanol-jackson) are now defined in <a href="https://docs.gradle.org/current/userguide/dependency_versions.html#sec:maven-style-range">ranges</a>.
+  This allows builds to pull the latest version of the target library without necessarily updating Methanol to the next release.
+  If you want to use a specific version, you can explicitly declare it provided it is within the range. The ranges are also reflected on OSGI metadata.</p>
+</li>
+</ul>
 <h2 id="version-184">Version 1.8.4<a class="headerlink" href="#version-184" title="Permanent link">&para;</a></h2>
 <ul>
 <li>
