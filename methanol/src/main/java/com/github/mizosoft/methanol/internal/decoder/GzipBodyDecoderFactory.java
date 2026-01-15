@@ -22,11 +22,14 @@
 
 package com.github.mizosoft.methanol.internal.decoder;
 
+import com.github.mizosoft.methanol.BodyDecoder;
 import com.github.mizosoft.methanol.decoder.AsyncDecoder;
 import com.github.mizosoft.methanol.internal.annotations.DefaultProvider;
+import aQute.bnd.annotation.spi.ServiceProvider;
 
 /** {@code BodyDecoder.Factory} for "gzip". */
 @DefaultProvider
+@ServiceProvider(BodyDecoder.Factory.class)
 public final class GzipBodyDecoderFactory extends AsyncBodyDecoderFactory {
 
   /** Creates a new {@code GzipBodyDecoderFactory}. Meant to be called by {@code ServiceLoader}. */

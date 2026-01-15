@@ -24,11 +24,13 @@ package com.github.mizosoft.methanol.brotli.internal;
 
 import com.github.mizosoft.methanol.BodyDecoder;
 import com.github.mizosoft.methanol.decoder.AsyncBodyDecoder;
+import aQute.bnd.annotation.spi.ServiceProvider;
 import java.io.IOException;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.util.concurrent.Executor;
 
 /** {@code BodyDecoder.Factory} provider for brotli encoding. */
+@ServiceProvider(BodyDecoder.Factory.class)
 public final class BrotliBodyDecoderFactory implements BodyDecoder.Factory {
   static final String BROTLI_ENCODING = "br";
 

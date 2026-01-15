@@ -15,6 +15,7 @@ plugins {
 }
 
 dependencies {
+  api(libs.bnd.annotations)
   testImplementation(libs.mockwebserver)
   testImplementation(libs.reactivestreams)
   testImplementation(libs.jimfs)

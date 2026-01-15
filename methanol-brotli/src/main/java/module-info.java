@@ -29,6 +29,7 @@ module methanol.brotli {
   requires methanol;
   requires static org.checkerframework.checker.qual;
   requires static com.google.errorprone.annotations;
+  requires static biz.aQute.bnd.annotation;
 
   provides com.github.mizosoft.methanol.BodyDecoder.Factory with
       com.github.mizosoft.methanol.brotli.internal.BrotliBodyDecoderFactory;

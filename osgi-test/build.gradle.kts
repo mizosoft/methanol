@@ -30,6 +30,7 @@ dependencies {
   testImplementation(libs.bnd.repository)
   testImplementation(libs.eclipse.osgi)
   testImplementation(libs.kotlin.stdlib)
+  testImplementation(libs.aries.spifly)
 }
 
 tasks.test {

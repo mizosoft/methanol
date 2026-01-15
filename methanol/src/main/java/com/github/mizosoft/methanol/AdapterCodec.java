@@ -31,6 +31,9 @@ import com.github.mizosoft.methanol.BodyAdapter.Hints;
 import com.github.mizosoft.methanol.internal.Utils;
 import com.github.mizosoft.methanol.internal.spi.ServiceProviders;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import aQute.bnd.annotation.Resolution;
+import aQute.bnd.annotation.spi.ServiceConsumer;
+import aQute.bnd.annotation.spi.ServiceConsumers;
 import java.net.http.HttpRequest.BodyPublisher;
 import java.net.http.HttpResponse.BodyHandler;
 import java.net.http.HttpResponse.BodySubscriber;
@@ -47,6 +50,10 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
  * implementations. The correct adapter is selected based on the object type and caller's {@link
  * Hints}, typically containing the {@link MediaType} of the desired mapping format.
  */
+@ServiceConsumers({
+  @ServiceConsumer(value=Encoder.class, resolution=Resolution.OPTIONAL),
+  @ServiceConsumer(value=Decoder.class, resolution=Resolution.OPTIONAL)
+})
 public final class AdapterCodec {
   private static final ServiceProviders<Encoder> installedEncoders =
       new ServiceProviders<>(Encoder.class);

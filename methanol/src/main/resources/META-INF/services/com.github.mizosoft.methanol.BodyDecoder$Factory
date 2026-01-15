@@ -1,2 +1,0 @@
-com.github.mizosoft.methanol.internal.decoder.GzipBodyDecoderFactory
-com.github.mizosoft.methanol.internal.decoder.DeflateBodyDecoderFactory

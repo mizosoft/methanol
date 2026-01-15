@@ -24,6 +24,8 @@ package com.github.mizosoft.methanol.internal.spi;
 
 import com.github.mizosoft.methanol.BodyDecoder;
 import com.github.mizosoft.methanol.internal.annotations.DefaultProvider;
+import aQute.bnd.annotation.Resolution;
+import aQute.bnd.annotation.spi.ServiceConsumer;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +34,7 @@ import java.util.stream.Collectors;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 /** Utility class for finding decoder factories. */
+@ServiceConsumer(value =BodyDecoder.Factory.class, resolution = Resolution.OPTIONAL)
 public class BodyDecoderFactoryProviders {
   private static final ServiceProviders<BodyDecoder.Factory> factories =
       new ServiceProviders<>(BodyDecoder.Factory.class);
