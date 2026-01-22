@@ -128,6 +128,17 @@ public final class HeadersBuilder {
     return headers.remove(requireNonNull(name)) != null;
   }
 
+  public boolean rename(String name, String newName) {
+    requireNonNull(name);
+    requireNonNull(newName);
+    if (headers.containsKey(name)) {
+      List<String> values = headers.remove(name);
+      headers.put(newName, values);
+      return true;
+    }
+    return false;
+  }
+
   public boolean removeIf(BiPredicate<String, String> filter) {
     requireNonNull(filter);
     boolean mutated = false;

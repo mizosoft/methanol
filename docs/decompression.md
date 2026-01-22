@@ -15,6 +15,10 @@ final Methanol client = Methanol.create();
 }
 ```
 
+All `BodyDecoder.Factories` are automatically used with the Methanol HTTP Client if `Methanol` has been created with `autoAcceptEncoding` set to `true` (which is the default). This also leads to all registered `BodyDecoder.Factory` instances populating the automatically generated `Accept-Encoding` (all with equal priority) request header to let the server know about understood compressions.
+
+The original response headers `Content-Length` and `Content-Encoding` are removed if Methanol decompressed the response already accordingly. One can create `Methanol` with `emitProcessedResponseHeaders` set to `true` to still receive them with their original value in response headers whose names are prefixed with `X-Methanol-Original-`.
+
 Read on if you're interested in knowing how that's accomplished, or you want to extend decompression support.
 
 ## Decoding BodyHandler

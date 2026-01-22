@@ -163,6 +163,12 @@ public final class ResponseBuilder<T> implements HeadersAccumulator<ResponseBuil
   }
 
   @CanIgnoreReturnValue
+  public ResponseBuilder<T> renameHeader(String name, String newName) {
+    headersBuilder.rename(name, newName);
+    return this;
+  }
+
+  @CanIgnoreReturnValue
   public ResponseBuilder<T> request(HttpRequest request) {
     this.request = requireNonNull(request);
     return this;
