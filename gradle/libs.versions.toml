@@ -8,6 +8,7 @@ jackson3 = "[3.0.3, 4)"
 protobuf = "[4.33.0,5)"
 errorprone = "2.41.0"
 brotli-dec = "0.1.2"
+zstd-jni = "1.5.6-4"
 okhttp = "5.1.0"
 jmh = "1.37"
 reactor = "[3.7.8,4)"
@@ -70,6 +71,7 @@ protobuf-compiler = { module = "com.google.protobuf:protoc", version.ref = "prot
 errorprone = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone" }
 errorprone-annotations = { module = "com.google.errorprone:error_prone_annotations", version.ref = "errorprone" }
 brotli-dec = { module = "org.brotli:dec", version.ref = "brotli-dec" }
+zstd-jni = { module = "com.github.luben:zstd-jni", version.ref = "zstd-jni" }
 mockwebserver = { module = "com.squareup.okhttp3:mockwebserver3", version.ref = "okhttp" }
 jmh-core = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh" }
 jmh-annprocess = { module = "org.openjdk.jmh:jmh-generator-annprocess", version.ref = "jmh" }
