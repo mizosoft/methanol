@@ -120,7 +120,7 @@ final class BrotliLoader {
       try {
         var libFile = Path.of(libraryPath).resolve(System.mapLibraryName(BASE_LIB_NAME));
         libLoader.load(libFile.toAbsolutePath().toString());
-        logger.log(Level.INFO, "Loaded {1} library from custom path <{2}>", BASE_LIB_NAME, libFile);
+        logger.log(Level.DEBUG, "Loaded {1} library from custom path <{2}>", BASE_LIB_NAME, libFile);
         return;
       } catch (UnsatisfiedLinkError ignored) {
       }
@@ -129,7 +129,7 @@ final class BrotliLoader {
     // Try java.library.path.
     try {
       libLoader.loadLibrary(BASE_LIB_NAME);
-      logger.log(Level.INFO, "Loaded {1} library from java.library.path", BASE_LIB_NAME);
+      logger.log(Level.DEBUG, "Loaded {1} library from java.library.path", BASE_LIB_NAME);
       return;
     } catch (UnsatisfiedLinkError ignored) {
     }
@@ -138,7 +138,7 @@ final class BrotliLoader {
     var entry = extractLibrary();
     entry.deleteOnExit();
     entry.loadLibrary();
-    logger.log(Level.INFO, "Loaded {1} library from JAR resources", BASE_LIB_NAME);
+    logger.log(Level.DEBUG, "Loaded {1} library from JAR resources", BASE_LIB_NAME);
   }
 
   ByteBuffer loadBrotliDictionary() throws IOException {
