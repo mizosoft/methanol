@@ -83,6 +83,7 @@ import java.io.UncheckedIOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.net.http.HttpResponse.BodySubscriber;
 import java.nio.ByteBuffer;
@@ -244,7 +245,7 @@ class IntegrationTest {
     TestUtils.shutdown(executor, scheduler);
   }
 
-  private void assertDecodes(String encoding, String expected, byte[] compressed) throws Exception {
+  private HttpResponse<String> assertDecodes(String encoding, String expected, byte[] compressed) throws Exception {
     server.enqueue(
         new MockResponse.Builder()
             .body(okBuffer(compressed))
@@ -253,6 +254,7 @@ class IntegrationTest {
     var request = HttpRequest.newBuilder(server.url("/").uri()).build();
     var response = client.send(request, decoding(ofString()));
     assertLinesMatch(lines(expected), lines(response.body()));
+    return response;
   }
 
   private void assertDecodesSmall(String encoding) throws Exception {
@@ -277,6 +279,15 @@ class IntegrationTest {
   void decoding_gzip() throws Exception {
     assertDecodesSmall("gzip");
     assertDecodesLarge("gzip");
+  }
+
+  @Test
+  void decoding_gzip_with_preserved_headers() throws Exception {
+    client = Methanol.newBuilder().autoAcceptEncoding(true).emitProcessedResponseHeaders(true).build();
+    var compressed = BASE64_DECODER.decode(poemEncodings.get("gzip"));
+    var response = assertDecodes("gzip", POEM, compressed);
+    assertEquals("gzip", response.headers().firstValue("X-Methanol-Processed-Content-Encoding").orElse(""));
+    
   }
 
   @Test
