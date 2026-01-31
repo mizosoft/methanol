@@ -1786,6 +1786,11 @@ loadScripts(document, 'script');</script>
 <div class="block">Emits at most <code>emit</code> items to downstream using <a href="methanol/com/github/mizosoft/methanol/internal/flow/AbstractSubscription.html#submitOnNext(java.util.concurrent.Flow.Subscriber,T)"><code>AbstractSubscription.submitOnNext(Subscriber, Object)</code></a>
  as long as it returns <code>true</code>.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html#emitProcessedResponseHeaders(boolean)" class="member-name-link">emitProcessedResponseHeaders(boolean)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/Methanol.BaseBuilder.html" title="class in com.github.mizosoft.methanol">Methanol.BaseBuilder</a></dt>
+<dd>
+<div class="block">If enabled, response headers being processed by any <a href="methanol/com/github/mizosoft/methanol/Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol"><code>Methanol.Interceptor</code></a> will still be emitted in
+ the response with its original name prefixed by <code>X-Methanol-Processed-</code>.</div>
+</dd>
 <dt><a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html#empty()" class="member-name-link">empty()</a> - Static method in interface com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/BodyAdapter.Hints.html" title="interface in com.github.mizosoft.methanol">BodyAdapter.Hints</a></dt>
 <dd>
 <div class="block">Returns a <code>Hints</code> object containing no hints.</div>
@@ -4575,6 +4580,10 @@ loadScripts(document, 'script');</script>
 <dd>
 <div class="block">Removes the tag associated with the given type.</div>
 </dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html#rename(java.lang.String,java.lang.String)" class="member-name-link">rename(String, String)</a> - Method in class com.github.mizosoft.methanol.internal.extensions.<a href="methanol/com/github/mizosoft/methanol/internal/extensions/HeadersBuilder.html" title="class in com.github.mizosoft.methanol.internal.extensions">HeadersBuilder</a></dt>
+<dd>&nbsp;</dd>
+<dt><a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html#renameHeader(java.lang.String,java.lang.String)" class="member-name-link">renameHeader(String, String)</a> - Method in class com.github.mizosoft.methanol.<a href="methanol/com/github/mizosoft/methanol/ResponseBuilder.html" title="class in com.github.mizosoft.methanol">ResponseBuilder</a></dt>
+<dd>&nbsp;</dd>
 <dt><a href="methanol.testing/com/github/mizosoft/methanol/testing/RepeatArguments.html" class="type-name-link" title="annotation interface in com.github.mizosoft.methanol.testing">RepeatArguments</a> - Annotation Interface in <a href="methanol.testing/com/github/mizosoft/methanol/testing/package-summary.html">com.github.mizosoft.methanol.testing</a></dt>
 <dd>
 <div class="block">Meant for <code>ArgumentsProvider</code> implementations to know how many times the same arguments

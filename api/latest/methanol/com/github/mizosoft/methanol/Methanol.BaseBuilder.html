@@ -171,52 +171,58 @@ loadScripts(document, 'script');</script>
 <div class="block">Configures the default headers as specified by the given consumer.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#headersTimeout(java.time.Duration)" class="member-name-link">headersTimeout</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;headersTimeout)</code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#emitProcessedResponseHeaders(boolean)" class="member-name-link">emitProcessedResponseHeaders</a><wbr>(boolean&nbsp;emitProcessedResponseHeaders)</code></div>
 <div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="block">If enabled, response headers being processed by any <a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol"><code>Methanol.Interceptor</code></a> will still be emitted in
+ the response with its original name prefixed by <code>X-Methanol-Processed-</code>.</div>
+</div>
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#headersTimeout(java.time.Duration)" class="member-name-link">headersTimeout</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;headersTimeout)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Sets a timeout that will raise an <a href="HttpHeadersTimeoutException.html" title="class in com.github.mizosoft.methanol"><code>HttpHeadersTimeoutException</code></a> if all response headers
  aren't received within the timeout.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#headersTimeout(java.time.Duration,java.util.concurrent.ScheduledExecutorService)" class="member-name-link">headersTimeout</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;headersTimeout,
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#headersTimeout(java.time.Duration,java.util.concurrent.ScheduledExecutorService)" class="member-name-link">headersTimeout</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;headersTimeout,
  <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/ScheduledExecutorService.html" title="class or interface in java.util.concurrent" class="external-link">ScheduledExecutorService</a>&nbsp;scheduler)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Same as <a href="#headersTimeout(java.time.Duration)"><code>headersTimeout(Duration)</code></a> but specifies a <code>ScheduledExecutorService</code> to
  use for scheduling timeout events.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#interceptor(com.github.mizosoft.methanol.Methanol.Interceptor)" class="member-name-link">interceptor</a><wbr>(<a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a>&nbsp;interceptor)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#interceptor(com.github.mizosoft.methanol.Methanol.Interceptor)" class="member-name-link">interceptor</a><wbr>(<a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a>&nbsp;interceptor)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Adds an interceptor that is invoked right after the client receives a request.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4 method-summary-table-tab6"><code>final <a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4 method-summary-table-tab6"><code><a href="#postDecorationInterceptor(com.github.mizosoft.methanol.Methanol.Interceptor)" class="member-name-link">postDecorationInterceptor</a><wbr>(<a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a>&nbsp;interceptor)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4 method-summary-table-tab6">
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4 method-summary-table-tab6"><code>final <a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4 method-summary-table-tab6"><code><a href="#postDecorationInterceptor(com.github.mizosoft.methanol.Methanol.Interceptor)" class="member-name-link">postDecorationInterceptor</a><wbr>(<a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol">Methanol.Interceptor</a>&nbsp;interceptor)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4 method-summary-table-tab6">
 <div class="block"><span class="deprecated-label">Deprecated.</span>
 <div class="deprecation-comment">Use <a href="#backendInterceptor(com.github.mizosoft.methanol.Methanol.Interceptor)"><code>backendInterceptor(Interceptor)</code></a></div>
 </div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#readTimeout(java.time.Duration)" class="member-name-link">readTimeout</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;readTimeout)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#readTimeout(java.time.Duration)" class="member-name-link">readTimeout</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;readTimeout)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Sets a <a href="MoreBodySubscribers.html#withReadTimeout(java.net.http.HttpResponse.BodySubscriber,java.time.Duration)"><code>read timeout</code></a>
  that is applied to every request.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#readTimeout(java.time.Duration,java.util.concurrent.ScheduledExecutorService)" class="member-name-link">readTimeout</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;readTimeout,
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#readTimeout(java.time.Duration,java.util.concurrent.ScheduledExecutorService)" class="member-name-link">readTimeout</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;readTimeout,
  <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/ScheduledExecutorService.html" title="class or interface in java.util.concurrent" class="external-link">ScheduledExecutorService</a>&nbsp;scheduler)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Sets a default <a href="MoreBodySubscribers.html#withReadTimeout(java.net.http.HttpResponse.BodySubscriber,java.time.Duration,java.util.concurrent.ScheduledExecutorService)"><code>readtimeout</code></a> that is applied to very request, using the given
  <code>ScheduledExecutorService</code> for scheduling timeout events.</div>
 </div>
-<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
-<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#requestTimeout(java.time.Duration)" class="member-name-link">requestTimeout</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;requestTimeout)</code></div>
-<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
+<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#requestTimeout(java.time.Duration)" class="member-name-link">requestTimeout</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/Duration.html" title="class or interface in java.time" class="external-link">Duration</a>&nbsp;requestTimeout)</code></div>
+<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Sets a default <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpRequest.html#timeout()" title="class or interface in java.net.http" class="external-link"><code>request timeout</code></a> to use on every request
  when no timeout is explicitly set on an <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpRequest.Builder.html" title="class or interface in java.net.http" class="external-link"><code>HttpRequest.Builder</code></a>.</div>
 </div>
-<div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
-<div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#userAgent(java.lang.String)" class="member-name-link">userAgent</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;userAgent)</code></div>
-<div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
+<div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></code></div>
+<div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4"><code><a href="#userAgent(java.lang.String)" class="member-name-link">userAgent</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html" title="class or interface in java.lang" class="external-link">String</a>&nbsp;userAgent)</code></div>
+<div class="col-last even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab4">
 <div class="block">Sets a default <code>User-Agent</code> header to use when sending requests.</div>
 </div>
 </div>
@@ -365,6 +371,23 @@ loadScripts(document, 'script');</script>
  with <a href="MoreBodyHandlers.html#decoding(java.net.http.HttpResponse.BodyHandler)"><code>MoreBodyHandlers.decoding(BodyHandler)</code></a>.
 
  <p>This value is <code>true</code> by default.</div>
+</section>
+</li>
+<li>
+<section class="detail" id="emitProcessedResponseHeaders(boolean)">
+<h3>emitProcessedResponseHeaders</h3>
+<div class="member-signature"><span class="annotations">@CanIgnoreReturnValue
+</span><span class="modifiers">public</span>&nbsp;<span class="return-type"><a href="Methanol.BaseBuilder.html" title="type parameter in Methanol.BaseBuilder">B</a></span>&nbsp;<span class="element-name">emitProcessedResponseHeaders</span><wbr><span class="parameters">(boolean&nbsp;emitProcessedResponseHeaders)</span></div>
+<div class="block">If enabled, response headers being processed by any <a href="Methanol.Interceptor.html" title="interface in com.github.mizosoft.methanol"><code>Methanol.Interceptor</code></a> will still be emitted in
+ the response with its original name prefixed by <code>X-Methanol-Processed-</code>.
+ This affects for example the <code>Content-Encoding</code> and <code>Content-Length</code> headers in case the 
+ response was already decompressed.
+
+ <p>This value is <code>false</code> by default.</div>
+<dl class="notes">
+<dt>Since:</dt>
+<dd>1.10.0</dd>
+</dl>
 </section>
 </li>
 <li>
