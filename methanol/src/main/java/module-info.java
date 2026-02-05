@@ -33,6 +33,7 @@ module methanol {
   requires transitive java.net.http;
   requires static org.checkerframework.checker.qual;
   requires static com.google.errorprone.annotations;
+  requires static biz.aQute.bnd.annotation;
   requires jdk.httpserver;
 
   exports com.github.mizosoft.methanol;

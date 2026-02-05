@@ -8,6 +8,7 @@ plugins {
 
 dependencies {
   implementation(project(":methanol"))
+  api(libs.bnd.annotations)
   testImplementation(project(":methanol-testing"))
   testImplementation(libs.brotli.dec)
 }
