@@ -166,7 +166,6 @@ public class Methanol extends HttpClient {
   private final Optional<Duration> readTimeout;
   private final Optional<AdapterCodec> adapterCodec;
   private final boolean autoAcceptEncoding;
-  private final boolean emitProcessedResponseHeaders;
   private final List<Interceptor> interceptors;
   private final List<Interceptor> backendInterceptors;
   private final List<HttpCache> caches;
@@ -185,7 +184,6 @@ public class Methanol extends HttpClient {
     readTimeout = Optional.ofNullable(builder.readTimeout);
     adapterCodec = Optional.ofNullable(builder.adapterCodec);
     autoAcceptEncoding = builder.autoAcceptEncoding;
-    emitProcessedResponseHeaders = builder.emitProcessedResponseHeaders;
     interceptors = List.copyOf(builder.interceptors);
     backendInterceptors = List.copyOf(builder.backendInterceptors);
     caches = builder.caches;
@@ -193,7 +191,12 @@ public class Methanol extends HttpClient {
     var mergedInterceptors = new ArrayList<>(interceptors);
     mergedInterceptors.add(
         new RewritingInterceptor(
-            baseUri, requestTimeout, adapterCodec, defaultHeaders, autoAcceptEncoding, emitProcessedResponseHeaders));
+            baseUri,
+            requestTimeout,
+            adapterCodec,
+            defaultHeaders,
+            autoAcceptEncoding,
+            builder.emitProcessedResponseHeaders));
     headersTimeout.ifPresent(
         timeout ->
             mergedInterceptors.add(
@@ -866,12 +869,13 @@ public class Methanol extends HttpClient {
     }
 
     /**
-     * If enabled, response headers being processed by any {@link Interceptor} will still be emitted in
-     * the response with its original name prefixed by {@code X-Methanol-Processed-}.
-     * This affects for example the {@code Content-Encoding} and {@code Content-Length} headers in case the 
-     * response was already decompressed.
+     * If enabled, response headers being processed by any {@link Interceptor} will still be emitted
+     * in the response with its original name prefixed by {@code X-Methanol-Processed-}. This
+     * affects for example the {@code Content-Encoding} and {@code Content-Length} headers in case
+     * the response was already decompressed.
      *
      * <p>This value is {@code false} by default.
+     *
      * @since 1.10.0
      */
     @CanIgnoreReturnValue
@@ -1216,7 +1220,9 @@ public class Methanol extends HttpClient {
         throws IOException, InterruptedException {
       var rewrittenRequest = rewriteRequest(request);
       return autoAcceptEncoding(rewrittenRequest)
-          ? removeOrMapContentEncoding(decoding(chain, emitProcessedResponseHeaders).forward(rewrittenRequest), emitProcessedResponseHeaders)
+          ? removeOrMapContentEncoding(
+              decoding(chain, emitProcessedResponseHeaders).forward(rewrittenRequest),
+              emitProcessedResponseHeaders)
           : chain.forward(rewrittenRequest);
     }
 
@@ -1284,7 +1290,8 @@ public class Methanol extends HttpClient {
                   r -> removeOrMapContentEncoding(r, emitProcessedResponseHeaders)));
     }
 
-    private static <T> HttpResponse<T> removeOrMapContentEncoding(HttpResponse<T> response, boolean emitProcessedResponseHeaders) {
+    private static <T> HttpResponse<T> removeOrMapContentEncoding(
+        HttpResponse<T> response, boolean emitProcessedResponseHeaders) {
       // Don't strip if the response wasn't compressed.
       if (response.headers().map().containsKey("Content-Encoding")) {
         var responseBuilder = ResponseBuilder.from(response);
