@@ -42,7 +42,6 @@ class AvroTest {
   private static final AvroSchema POINT_SCHEMA =
       new AvroSchema(
           new Schema.Parser()
-              .setValidate(true)
               .parse(
                   "{\n"
                       + "\"type\": \"record\",\n"
