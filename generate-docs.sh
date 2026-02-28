@@ -23,6 +23,7 @@ cp -f methanol-protobuf/README.md docs/adapters/protobuf.md
 cp -f methanol-kotlin/README.md docs/kotlin.md
 cp -f methanol-redis/README.md docs/redis.md
 cp -f methanol-brotli/README.md docs/brotli.md
+cp -f methanol-zstd/README.md docs/zstd.md
 cp -f methanol-benchmarks/README.md docs/benchmarks.md
 cp -f CHANGELOG.md docs/CHANGELOG.md
 cp -f CONTRIBUTING.md docs/CONTRIBUTING.md
