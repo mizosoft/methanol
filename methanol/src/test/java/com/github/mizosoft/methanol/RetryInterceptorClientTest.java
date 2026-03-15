@@ -394,7 +394,7 @@ class RetryInterceptorClientTest {
   }
 
   @Test
-  void retryListenerCompletion() throws Exception {
+  void retryListenerCompletionByExhaustion() throws Exception {
     var events = new ArrayList<RetryEvent>();
     var client =
         Methanol.newBuilder()
@@ -431,7 +431,7 @@ class RetryInterceptorClientTest {
             });
     assertThat(events)
         .element(2)
-        .asInstanceOf(type(Complete.class))
+        .asInstanceOf(type(Exhaustion.class))
         .satisfies(complete -> verifyThat(complete.context.request()).hasUri(serverUri));
   }
 
