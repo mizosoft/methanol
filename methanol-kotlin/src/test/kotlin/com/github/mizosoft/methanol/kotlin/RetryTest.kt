@@ -510,7 +510,7 @@ class RetryTest(private val server: MockWebServer) {
   }
 
   @Test
-  fun retryListenerCompletion() {
+  fun retryListenerCompletionByExhaustion() {
     val events = mutableListOf<RetryEvent>()
     val client = Client {
       adapterCodec {
@@ -548,7 +548,7 @@ class RetryTest(private val server: MockWebServer) {
       assertThat(retry.delay).isEqualTo(Duration.ZERO)
     }
     events.removeFirst()
-    assertThat(events).first().isInstanceOf(Complete::class).given { complete ->
+    assertThat(events).first().isInstanceOf(Exhaustion::class).given { complete ->
       verifyThat(complete.context.request()).hasUri(serverUri)
     }
   }

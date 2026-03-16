@@ -228,11 +228,10 @@ public final class RetryInterceptor implements Methanol.Interceptor {
     if (context.deadline().isPresent() && !clock.instant().isBefore(context.deadline().get())) {
       return Timeout.INSTANCE; // Listener will be called by timeout().
     } else if (context.retryCount() >= maxRetries) {
+      listener.onExhaustion(context);
       if (throwOnExhaustion) {
-        listener.onExhaustion(context);
         return Exhausted.INSTANCE;
       } else {
-        listener.onComplete(context);
         return Complete.INSTANCE;
       }
     } else {
@@ -612,8 +611,9 @@ public final class RetryInterceptor implements Methanol.Interceptor {
     default void onComplete(Context<?> context) {}
 
     /**
-     * Called when the interceptor exhausts allowed retry attempts. The given context's {@link
-     * Context#retryCount()} equals the specified {@link Builder#maxRetries(int)}.
+     * Called when the interceptor exhausts allowed retry attempts without a successful response.
+     * The given context's {@link Context#retryCount()} is equal to the specified {@link
+     * Builder#maxRetries(int)}.
      */
     default void onExhaustion(Context<?> context) {}
   }
