@@ -119,7 +119,7 @@ loadScripts(document, 'script');</script>
 <div class="col-first odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5"><code>default void</code></div>
 <div class="col-second odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5"><code><a href="#onExhaustion(com.github.mizosoft.methanol.RetryInterceptor.Context)" class="member-name-link">onExhaustion</a><wbr>(<a href="RetryInterceptor.Context.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.Context</a>&lt;?&gt;&nbsp;context)</code></div>
 <div class="col-last odd-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5">
-<div class="block">Called when the interceptor exhausts allowed retry attempts.</div>
+<div class="block">Called when the interceptor exhausts allowed retry attempts without a successful response.</div>
 </div>
 <div class="col-first even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5"><code>default void</code></div>
 <div class="col-second even-row-color method-summary-table method-summary-table-tab2 method-summary-table-tab5"><code><a href="#onFirstAttempt(java.net.http.HttpRequest)" class="member-name-link">onFirstAttempt</a><wbr>(<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.net.http/java/net/http/HttpRequest.html" title="class or interface in java.net.http" class="external-link">HttpRequest</a>&nbsp;request)</code></div>
@@ -177,7 +177,8 @@ loadScripts(document, 'script');</script>
 <section class="detail" id="onExhaustion(com.github.mizosoft.methanol.RetryInterceptor.Context)">
 <h3>onExhaustion</h3>
 <div class="member-signature"><span class="modifiers">default</span>&nbsp;<span class="return-type">void</span>&nbsp;<span class="element-name">onExhaustion</span><wbr><span class="parameters">(<a href="RetryInterceptor.Context.html" title="interface in com.github.mizosoft.methanol">RetryInterceptor.Context</a>&lt;?&gt;&nbsp;context)</span></div>
-<div class="block">Called when the interceptor exhausts allowed retry attempts. The given context's <a href="RetryInterceptor.Context.html#retryCount()"><code>RetryInterceptor.Context.retryCount()</code></a> equals the specified <a href="RetryInterceptor.Builder.html#maxRetries(int)"><code>RetryInterceptor.Builder.maxRetries(int)</code></a>.</div>
+<div class="block">Called when the interceptor exhausts allowed retry attempts without a successful response.
+ The given context's <a href="RetryInterceptor.Context.html#retryCount()"><code>RetryInterceptor.Context.retryCount()</code></a> is equal to the specified <a href="RetryInterceptor.Builder.html#maxRetries(int)"><code>RetryInterceptor.Builder.maxRetries(int)</code></a>.</div>
 </section>
 </li>
 </ul>
