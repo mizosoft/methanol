@@ -4,6 +4,13 @@ Methanol provides an [Interceptor](./interceptors.md) implementation that retrie
 
 ## Usage
 
+First, it is recommended to run with `-Djdk.httpclient.disableRetryConnect=true`, as Java's `HttpClient` silently retries failed connections on its own, interfering with `RetryInterceptor`'s
+retries (see [JDK Internal Retries](#jdk-internal-retries)). For quick examples, you can set the property in code instead, as long as no request has been sent yet.
+
+```java
+System.setProperty("jdk.httpclient.disableRetryConnect", "true"); // Before any request is sent.
+```
+
 You can create [`RetryInterceptor`](https://mizosoft.github.io/methanol/api/latest/methanol/com/github/mizosoft/methanol/RetryInterceptor.html) by specifying conditions that trigger retries, based on the resulting response or
 exception, with varying degrees of specificity. Here's a `RetryInterceptor` that retries `5xx` responses or `ConnectExceptions` at most 3 times (making at most 4 total attempts),
 and backs off each retry with [exponential full-jitter](https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/) delays to not overwhelm the server.
@@ -191,3 +198,22 @@ var interceptor = RetryInterceptor.newBuilder()
     })
     .build();
 ```
+
+## JDK Internal Retries
+
+`RetryInterceptor` runs above the underlying `HttpClient`, which does some retrying of its own before the interceptor gets to see the result. These internal retries are invisible to
+the interceptor, so a single interceptor-level attempt can correspond to more than one network attempt.
+
+This matters most for `ConnectException`: by default, `HttpClient` retries a failed connection once, regardless of the request method. So a `RetryInterceptor` that retries `ConnectException`
+at most `maxRetries` times can make up to `2 * (maxRetries + 1)` connection attempts. `RetryInterceptor` logs a warning (once) the first time it retries a `ConnectException` while these
+internal retries appear to be enabled.
+
+The JDK exposes no per-client or per-request control over this behavior. The only levers are JVM-global system properties, read once when `HttpClient` sends its first request:
+
+| Property                              | Default | Effect                                                                                                                           |
+|---------------------------------------|---------|----------------------------------------------------------------------------------------------------------------------------------|
+| `jdk.httpclient.disableRetryConnect`  | `false` | Set to `true` to disable internal connect retries, so only `RetryInterceptor` governs retrying connections.                      |
+| `jdk.httpclient.enableAllMethodRetry` | `false` | Whether non-idempotent requests are internally retried when a pooled connection turns out to be closed. Doesn't affect connect retries. |
+| `jdk.httpclient.redirects.retrylimit` | `5`     | Caps the total internal attempts (redirects included) for a single request.                                                      |
+
+If you want `maxRetries` to closely reflect actual connection attempts, run with `-Djdk.httpclient.disableRetryConnect=true`.
