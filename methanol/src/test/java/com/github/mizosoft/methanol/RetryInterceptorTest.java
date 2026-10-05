@@ -35,6 +35,7 @@ import com.github.mizosoft.methanol.testing.MockDelayer;
 import com.github.mizosoft.methanol.testing.RecordingHttpClient;
 import com.github.mizosoft.methanol.testing.TestException;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
@@ -45,9 +46,16 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -57,7 +65,10 @@ import org.junit.jupiter.params.provider.ValueSource;
 @Timeout(2)
 @ExtendWith(ExecutorExtension.class)
 class RetryInterceptorTest {
+  private final Logger retryInterceptorLogger = Logger.getLogger(RetryInterceptor.class.getName());
+
   private Executor executor;
+  private @Nullable Runnable loggerCleanup;
 
   @BeforeEach
   @ExecutorSpec(ExecutorExtension.ExecutorType.CACHED_POOL)
@@ -966,5 +977,129 @@ class RetryInterceptorTest {
     assertThat(responseFuture)
         .succeedsWithin(Duration.ofSeconds(1))
         .satisfies(r -> verifyThat(r).hasCode(200));
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void warnOnceOnRetryingConnectExceptionWithJdkInternalConnectRetries(boolean async) {
+    var records = recordRetryInterceptorLogs();
+    var recordingClient = new RecordingHttpClient();
+    var client =
+        Methanol.newBuilder(recordingClient)
+            .interceptor(
+                RetryInterceptor.newBuilder().maxRetries(2).onException(IOException.class).build())
+            .build();
+    for (int i = 0; i < 2; i++) {
+      var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
+      recordingClient.awaitCall().completeExceptionally(new ConnectException());
+      recordingClient.awaitCall().completeExceptionally(new ConnectException());
+      recordingClient.awaitCall().complete();
+      assertThat(responseFuture).succeedsWithin(Duration.ofSeconds(1));
+    }
+
+    assertThat(records)
+        .singleElement()
+        .satisfies(
+            record -> {
+              assertThat(record.getLevel()).isEqualTo(Level.WARNING);
+              assertThat(record.getMessage()).contains("-Djdk.httpclient.disableRetryConnect=true");
+            });
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void noWarningOnRetryingOtherExceptions(boolean async) {
+    var records = recordRetryInterceptorLogs();
+    var recordingClient = new RecordingHttpClient();
+    var client =
+        Methanol.newBuilder(recordingClient)
+            .interceptor(
+                RetryInterceptor.newBuilder().maxRetries(2).onException(IOException.class).build())
+            .build();
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
+    recordingClient.awaitCall().completeExceptionally(new IOException());
+    recordingClient.awaitCall().complete();
+    assertThat(responseFuture).succeedsWithin(Duration.ofSeconds(1));
+    assertThat(records).isEmpty();
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void noWarningOnNotRetryingConnectException(boolean async) {
+    var records = recordRetryInterceptorLogs();
+    var recordingClient = new RecordingHttpClient();
+    var client =
+        Methanol.newBuilder(recordingClient)
+            .interceptor(
+                RetryInterceptor.newBuilder()
+                    .maxRetries(2)
+                    .onException(TestException.class)
+                    .build())
+            .build();
+    var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
+    recordingClient.awaitCall().completeExceptionally(new ConnectException());
+    assertThat(responseFuture)
+        .failsWithin(Duration.ofSeconds(1))
+        .withThrowableOfType(ExecutionException.class)
+        .withCauseExactlyInstanceOf(ConnectException.class);
+    assertThat(records).isEmpty();
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void noWarningOnRetryingConnectExceptionWithoutJdkInternalConnectRetries(boolean async) {
+    var records = recordRetryInterceptorLogs();
+    var recordingClient = new RecordingHttpClient();
+    var client =
+        Methanol.newBuilder(recordingClient)
+            .interceptor(
+                RetryInterceptor.newBuilder().maxRetries(2).onException(IOException.class).build())
+            .build();
+    var previousValue = System.setProperty("jdk.httpclient.disableRetryConnect", "true");
+    try {
+      var responseFuture = send(client, MutableRequest.GET("https://example.com"), async);
+      recordingClient.awaitCall().completeExceptionally(new ConnectException());
+      recordingClient.awaitCall().complete();
+      assertThat(responseFuture).succeedsWithin(Duration.ofSeconds(1));
+    } finally {
+      if (previousValue != null) {
+        System.setProperty("jdk.httpclient.disableRetryConnect", previousValue);
+      } else {
+        System.clearProperty("jdk.httpclient.disableRetryConnect");
+      }
+    }
+    assertThat(records).isEmpty();
+  }
+
+  /**
+   * Resets the once-per-JVM warning about JDK-internal connect retries and returns a list that
+   * records subsequent logs by {@code RetryInterceptor} for the rest of the test.
+   */
+  private List<LogRecord> recordRetryInterceptorLogs() {
+    RetryInterceptor.warnedOnJdkInternalConnectRetries.set(false);
+    var records = new CopyOnWriteArrayList<LogRecord>();
+    var handler =
+        new Handler() {
+          @Override
+          public void publish(LogRecord record) {
+            records.add(record);
+          }
+
+          @Override
+          public void flush() {}
+
+          @Override
+          public void close() {}
+        };
+    retryInterceptorLogger.addHandler(handler);
+    loggerCleanup = () -> retryInterceptorLogger.removeHandler(handler);
+    return records;
+  }
+
+  @AfterEach
+  void tearDown() {
+    if (loggerCleanup != null) {
+      loggerCleanup.run();
+    }
   }
 }

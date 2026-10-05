@@ -35,6 +35,7 @@ import com.github.mizosoft.methanol.internal.util.Http;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.IOException;
 import java.lang.System.Logger;
+import java.net.ConnectException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
@@ -50,6 +51,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -84,6 +86,9 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 public final class RetryInterceptor implements Methanol.Interceptor {
   private static final Logger logger = System.getLogger(RetryInterceptor.class.getName());
 
+  // Package-private for testing.
+  static final AtomicBoolean warnedOnJdkInternalConnectRetries = new AtomicBoolean();
+
   private final BiPredicate<HttpRequest, Chain<?>> selector;
   private final int maxRetries;
   private final Function<HttpRequest, HttpRequest> beginWith;
@@ -106,6 +111,31 @@ public final class RetryInterceptor implements Methanol.Interceptor {
     this.delayer = builder.delayer;
     this.listener = builder.listener;
     this.throwOnExhaustion = builder.throwOnExhaustion;
+  }
+
+  /**
+   * Warns (once) if the interceptor is about to retry a {@code ConnectException} that the JDK has
+   * likely already retried internally.
+   */
+  private static void warnOnJdkInternalConnectRetries(Context<?> context) {
+    if (!warnedOnJdkInternalConnectRetries.get()
+        && context.exception().filter(ConnectException.class::isInstance).isPresent()
+        && jdkInternalConnectRetriesEnabled()
+        && warnedOnJdkInternalConnectRetries.compareAndSet(false, true)) {
+      logger.log(
+          Logger.Level.WARNING,
+          "Retrying a ConnectException that HttpClient has likely already retried internally,"
+              + " which multiplies the connection attempts performed by RetryInterceptor."
+              + " Consider running with -Djdk.httpclient.disableRetryConnect=true. See"
+              + " https://mizosoft.github.io/methanol/retrying_requests/#jdk-internal-retries");
+    }
+  }
+
+  // Mirrors jdk.internal.net.http.MultiExchange.disableRetryConnect(), except that this can't see
+  // values coming from $JAVA_HOME/conf/net.properties, hence the "likely" hedging in the warning.
+  private static boolean jdkInternalConnectRetriesEnabled() {
+    var value = System.getProperty("jdk.httpclient.disableRetryConnect");
+    return value == null || !(value.isEmpty() || Boolean.parseBoolean(value));
   }
 
   @Override
@@ -238,6 +268,7 @@ public final class RetryInterceptor implements Methanol.Interceptor {
       return eval(context)
           .<RetryAction>map(
               nextRequest -> {
+                warnOnJdkInternalConnectRetries(context);
                 var delay = backoffStrategy.backoff(context);
                 listener.onRetry(context, nextRequest, delay);
                 return new Retry(nextRequest, delay);
@@ -661,6 +692,13 @@ public final class RetryInterceptor implements Methanol.Interceptor {
      * number of retries is exhausted, the interceptor returns the request or exception as-is, or
      * throws an {@link HttpRetriesExhaustedException} if {@link #throwOnExhaustion()} is specified.
      * The default {@code maxRetries} is 5.
+     *
+     * <p>Note that the underlying {@code HttpClient} silently retries a failed connection once on
+     * its own, so each attempt made by this interceptor can amount to two connection attempts.
+     * Consider running with {@code -Djdk.httpclient.disableRetryConnect=true} so that the
+     * interceptor has full control of connection retries. See <a
+     * href="https://mizosoft.github.io/methanol/retrying_requests/#jdk-internal-retries">JDK
+     * Internal Retries</a>.
      */
     @CanIgnoreReturnValue
     public Builder maxRetries(int maxRetries) {
