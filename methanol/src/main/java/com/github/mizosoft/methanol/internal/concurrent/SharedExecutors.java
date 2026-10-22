@@ -25,6 +25,7 @@ package com.github.mizosoft.methanol.internal.concurrent;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -45,7 +46,12 @@ public class SharedExecutors {
   private static final Lazy<ExecutorService> lazyExecutor =
       Lazy.of(() -> Executors.newCachedThreadPool(threadFactory));
   private static final Lazy<ScheduledExecutorService> lazyScheduler =
-      Lazy.of(() -> Executors.newScheduledThreadPool(1, threadFactory));
+      Lazy.of(
+          () -> {
+            var scheduler = new ScheduledThreadPoolExecutor(1, threadFactory);
+            scheduler.setRemoveOnCancelPolicy(true);
+            return scheduler;
+          });
 
   private SharedExecutors() {}
 
